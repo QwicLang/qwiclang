@@ -1,0 +1,7 @@
+private func Name(name:string){
+    print(name)
+}
+
+func main (){
+    Name("Tanaka")
+}
