@@ -1,0 +1,8 @@
+module users
+
+private func validateUser() {
+}
+
+public func createUser() {
+    print("created")
+}

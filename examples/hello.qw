@@ -1,0 +1,14 @@
+
+public func MyName(name:string){
+    print("My name is")
+    print(name)
+}
+public func main() {
+    print("Hello, Qwic")
+    if 1 < 0{
+        print("1 is less than 0")
+    } else {
+        print("1 is greater than 0")
+    }
+    MyName("Tanaka")
+}

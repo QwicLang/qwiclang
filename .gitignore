@@ -1,0 +1,23 @@
+# Go
+/bin/
+*.test
+coverage.out
+
+# Qwic build outputs
+/.qwic-cache/
+/hello
+/functions
+/control_flow
+/nano
+/main
+/a.out
+
+# Temporary/generated native backend artifacts
+*.o
+*.exe
+*.out
+
+# Editor and OS files
+.DS_Store
+.idea/
+.vscode/

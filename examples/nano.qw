@@ -1,0 +1,6 @@
+public func main() {
+    const delta: nano = 0.016666
+    const value: nano = delta * 2
+
+    print(value)
+}

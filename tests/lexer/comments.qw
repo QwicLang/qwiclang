@@ -1,0 +1,7 @@
+// leading comment
+const x: int = 1 // trailing comment
+
+/*
+    block comment
+*/
+let y: int = x
