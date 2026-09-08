@@ -83,16 +83,21 @@ func (lexer *Lexer) NextToken() (token.Token, *Error) {
 		return lexer.makeToken(token.Newline, lexeme, start), nil
 	}
 
-	if isIdentifierStart(r) {
-		return lexer.lexIdentifier(start), nil
-	}
-
 	if unicode.IsDigit(r) {
 		return lexer.lexNumber(start), nil
 	}
 
+	if r == 'f' && lexer.peekAheadRune(1, '"') {
+		lexer.advance()
+		return lexer.lexStringWithKind(start, token.FString)
+	}
+
+	if isIdentifierStart(r) {
+		return lexer.lexIdentifier(start), nil
+	}
+
 	if r == '"' {
-		return lexer.lexString(start)
+		return lexer.lexStringWithKind(start, token.String)
 	}
 
 	return lexer.lexSymbol(start)
@@ -154,7 +159,7 @@ func (lexer *Lexer) lexNumber(start token.Position) token.Token {
 	return lexer.makeToken(kind, lexer.source[start.Offset:lexer.offset], start)
 }
 
-func (lexer *Lexer) lexString(start token.Position) (token.Token, *Error) {
+func (lexer *Lexer) lexStringWithKind(start token.Position, kind token.Kind) (token.Token, *Error) {
 	lexer.advance()
 
 	for {
@@ -169,7 +174,7 @@ func (lexer *Lexer) lexString(start token.Position) (token.Token, *Error) {
 		}
 		if r == '"' {
 			lexer.advance()
-			return lexer.makeToken(token.String, lexer.source[start.Offset:lexer.offset], start), nil
+			return lexer.makeToken(kind, lexer.source[start.Offset:lexer.offset], start), nil
 		}
 		if r == '\\' {
 			lexer.advance()

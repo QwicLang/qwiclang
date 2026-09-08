@@ -26,7 +26,11 @@ public func main() {
 ```
 
 `qwic build main.qw` resolves `import users` as `users.qw` in the same
-directory as `main.qw`. Imported source files may define a `module` declaration.
+directory as `main.qw`. Imported source files may define a `module`
+declaration.
+
+Standard-library packages such as `strings` are resolved by the compiler and do
+not require a local `strings.qw` file.
 
 ## Visibility
 
@@ -37,7 +41,7 @@ directory as `main.qw`. Imported source files may define a `module` declaration.
 
 ## Current Limits
 
-- Imports resolve only to same-directory `.qw` files.
+- User imports resolve only to same-directory `.qw` files.
 - Module aliases are not implemented.
 - Only function symbols participate in module visibility.
 - Package registries and nested module paths are deferred.

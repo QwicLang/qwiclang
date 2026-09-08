@@ -1,0 +1,9 @@
+import strings
+
+public func main() {
+    const raw: string = "  QwicLang  "
+    const clean: string = strings.trim(raw)
+
+    print(f"name={strings.upper(clean)} length={strings.length(clean)}")
+    print(strings.contains(clean, "Lang"))
+}

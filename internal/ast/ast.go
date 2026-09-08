@@ -249,6 +249,22 @@ func (expression *LiteralExpression) Position() token.Position {
 	return expression.Pos
 }
 
+type InterpolatedStringPart struct {
+	Text       string
+	Expression Expression
+}
+
+type InterpolatedStringExpression struct {
+	Parts []InterpolatedStringPart
+	Pos   token.Position
+}
+
+func (*InterpolatedStringExpression) expressionNode() {}
+
+func (expression *InterpolatedStringExpression) Position() token.Position {
+	return expression.Pos
+}
+
 type UnaryExpression struct {
 	Operator token.Kind
 	Right    Expression
@@ -345,6 +361,16 @@ func writeNode(builder *strings.Builder, node Node, indent int) {
 		writeNode(builder, n.Left, indent+1)
 	case *LiteralExpression:
 		fmt.Fprintf(builder, "%sLiteralExpression kind=%s value=%s\n", prefix, n.Kind, n.Value)
+	case *InterpolatedStringExpression:
+		builder.WriteString(prefix + "InterpolatedStringExpression\n")
+		for _, part := range n.Parts {
+			if part.Expression == nil {
+				fmt.Fprintf(builder, "%s  StringPart text=%q\n", prefix, part.Text)
+				continue
+			}
+			builder.WriteString(prefix + "  Interpolation\n")
+			writeNode(builder, part.Expression, indent+2)
+		}
 	case *UnaryExpression:
 		fmt.Fprintf(builder, "%sUnaryExpression operator=%s\n", prefix, n.Operator)
 		writeNode(builder, n.Right, indent+1)

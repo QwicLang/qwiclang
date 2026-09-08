@@ -11,6 +11,7 @@ import (
 
 	"qwiclang/internal/diagnostic"
 	"qwiclang/internal/ir"
+	"qwiclang/internal/stdlib"
 	"qwiclang/internal/token"
 	"qwiclang/internal/types"
 )
@@ -98,6 +99,7 @@ type cGenerator struct {
 func (generator *cGenerator) writePreamble() {
 	generator.builder.WriteString("#include <stdbool.h>\n")
 	generator.builder.WriteString("#include <stdint.h>\n")
+	generator.builder.WriteString("#include <stdio.h>\n")
 	generator.builder.WriteString("#include \"qwic_runtime.h\"\n\n")
 }
 
@@ -164,6 +166,8 @@ func (generator *cGenerator) writeInstruction(function ir.Function, instruction 
 		fmt.Fprintf(&generator.builder, "  %s %s = %s;\n", cType(node.Type), cValue(node.Target), cBinaryExpression(node))
 	case *ir.Call:
 		generator.writeCall(node)
+	case *ir.FormatString:
+		generator.writeFormatString(node)
 	case *ir.Return:
 		generator.writeReturn(function, node)
 	case *ir.Branch:
@@ -173,6 +177,15 @@ func (generator *cGenerator) writeInstruction(function ir.Function, instruction 
 	default:
 		generator.diagnostics = append(generator.diagnostics, diagnostic.Error(token.Position{Line: 1, Column: 1}, fmt.Sprintf("unsupported IR instruction %T", instruction)))
 	}
+}
+
+func (generator *cGenerator) writeFormatString(instruction *ir.FormatString) {
+	generator.valueTypes[instruction.Target] = instruction.Type
+	format, args := cFormatString(instruction.Parts)
+	lengthName := cValue(instruction.Target) + "_len"
+	fmt.Fprintf(&generator.builder, "  size_t %s = (size_t)snprintf(NULL, 0, %s%s) + 1;\n", lengthName, cStringLiteral(format), args)
+	fmt.Fprintf(&generator.builder, "  char *%s = qwic_alloc(%s);\n", cValue(instruction.Target), lengthName)
+	fmt.Fprintf(&generator.builder, "  snprintf(%s, %s, %s%s);\n", cValue(instruction.Target), lengthName, cStringLiteral(format), args)
 }
 
 func (generator *cGenerator) writeCall(call *ir.Call) {
@@ -195,6 +208,37 @@ func (generator *cGenerator) writeCall(call *ir.Call) {
 		generator.builder.WriteString(cValue(arg))
 	}
 	generator.builder.WriteString(");\n")
+}
+
+func cFormatString(parts []ir.FormatPart) (string, string) {
+	var format strings.Builder
+	var args strings.Builder
+	for _, part := range parts {
+		if part.Value == "" {
+			format.WriteString(strings.ReplaceAll(part.Text, "%", "%%"))
+			continue
+		}
+		specifier, expression := cFormatArgument(part)
+		format.WriteString(specifier)
+		args.WriteString(", ")
+		args.WriteString(expression)
+	}
+	return format.String(), args.String()
+}
+
+func cFormatArgument(part ir.FormatPart) (string, string) {
+	switch part.Type.Kind {
+	case types.Int:
+		return "%lld", fmt.Sprintf("(long long)%s", cValue(part.Value))
+	case types.Float, types.Nano:
+		return "%.6f", cValue(part.Value)
+	case types.String:
+		return "%s", cValue(part.Value)
+	case types.Bool:
+		return "%s", fmt.Sprintf("(%s ? \"true\" : \"false\")", cValue(part.Value))
+	default:
+		return "%s", "\"<invalid>\""
+	}
 }
 
 func (generator *cGenerator) writePrint(args []string) {
@@ -291,6 +335,29 @@ func cLiteral(typ types.Type, value string) string {
 	}
 }
 
+func cStringLiteral(value string) string {
+	var builder strings.Builder
+	builder.WriteByte('"')
+	for _, r := range value {
+		switch r {
+		case '\\':
+			builder.WriteString(`\\`)
+		case '"':
+			builder.WriteString(`\"`)
+		case '\n':
+			builder.WriteString(`\n`)
+		case '\r':
+			builder.WriteString(`\r`)
+		case '\t':
+			builder.WriteString(`\t`)
+		default:
+			builder.WriteRune(r)
+		}
+	}
+	builder.WriteByte('"')
+	return builder.String()
+}
+
 func zeroValue(typ types.Type) string {
 	switch typ.Kind {
 	case types.Bool:
@@ -320,6 +387,9 @@ func cIdentifier(name string) string {
 func cFunctionName(name string) string {
 	if name == "main" {
 		return "main"
+	}
+	if function, ok := stdlib.LookupFunction(name); ok {
+		return function.RuntimeName
 	}
 	return sanitizeCName("qw_func_" + name)
 }

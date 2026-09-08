@@ -159,6 +159,36 @@ func TestParseExpressionPrecedence(t *testing.T) {
 	}
 }
 
+func TestParseInterpolatedString(t *testing.T) {
+	program := parseValid(t, `func main() {
+    const name: string = "Qwic"
+    const message: string = f"Hello, {name}: {20 + 22}"
+}
+`)
+
+	function := program.Declarations[0].(*ast.FunctionDeclaration)
+	variable := function.Body.Statements[1].(*ast.VariableDeclaration)
+	interpolated, ok := variable.Value.(*ast.InterpolatedStringExpression)
+	if !ok {
+		t.Fatalf("value type = %T, want *ast.InterpolatedStringExpression", variable.Value)
+	}
+	if len(interpolated.Parts) != 4 {
+		t.Fatalf("part count = %d, want 4", len(interpolated.Parts))
+	}
+	if interpolated.Parts[0].Text != "Hello, " {
+		t.Fatalf("first text part = %q, want greeting", interpolated.Parts[0].Text)
+	}
+	if _, ok := interpolated.Parts[1].Expression.(*ast.IdentifierExpression); !ok {
+		t.Fatalf("first interpolation = %T, want identifier", interpolated.Parts[1].Expression)
+	}
+	if interpolated.Parts[2].Text != ": " {
+		t.Fatalf("middle text part = %q, want separator", interpolated.Parts[2].Text)
+	}
+	if _, ok := interpolated.Parts[3].Expression.(*ast.BinaryExpression); !ok {
+		t.Fatalf("second interpolation = %T, want binary expression", interpolated.Parts[3].Expression)
+	}
+}
+
 func TestParseModuleImportAndQualifiedCall(t *testing.T) {
 	program := parseValid(t, `module app
 import users

@@ -12,6 +12,7 @@ const (
 	Integer
 	Float
 	String
+	FString
 
 	Public
 	Private
@@ -119,6 +120,8 @@ func (kind Kind) String() string {
 		return "Float"
 	case String:
 		return "String"
+	case FString:
+		return "FString"
 	case Public:
 		return "Public"
 	case Private:

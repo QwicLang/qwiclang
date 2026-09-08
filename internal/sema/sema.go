@@ -6,6 +6,7 @@ import (
 	"qwiclang/internal/ast"
 	"qwiclang/internal/diagnostic"
 	"qwiclang/internal/parser"
+	"qwiclang/internal/stdlib"
 	"qwiclang/internal/token"
 	"qwiclang/internal/types"
 )
@@ -114,6 +115,23 @@ func NewChecker() *Checker {
 		ReturnType: types.VoidType,
 		Builtin:    true,
 		Pos:        token.Position{Line: 1, Column: 1},
+	}
+	for _, function := range stdlib.Functions() {
+		parameters := make([]ParameterSymbol, 0, len(function.Parameters))
+		for _, parameter := range function.Parameters {
+			parameters = append(parameters, ParameterSymbol{Name: parameter.Name, Type: parameter.Type})
+		}
+		qualified := function.Package + "." + function.Name
+		checker.functions[qualified] = FunctionSymbol{
+			Name:       function.Name,
+			Module:     function.Package,
+			Qualified:  qualified,
+			Visibility: ast.VisibilityPublic,
+			Parameters: parameters,
+			ReturnType: function.ReturnType,
+			Builtin:    true,
+			Pos:        token.Position{Line: 1, Column: 1},
+		}
 	}
 	return checker
 }
@@ -357,6 +375,20 @@ func (checker *Checker) inferExpression(expression ast.Expression, activeScope *
 		return variable.typ
 	case *ast.LiteralExpression:
 		return literalType(node)
+	case *ast.InterpolatedStringExpression:
+		for _, part := range node.Parts {
+			if part.Expression == nil {
+				continue
+			}
+			partType := checker.inferExpression(part.Expression, activeScope)
+			if partType.Kind == types.Invalid {
+				continue
+			}
+			if partType.Kind != types.String && partType.Kind != types.Int && partType.Kind != types.Float && partType.Kind != types.Nano && partType.Kind != types.Bool {
+				checker.errorAt(part.Expression.Position(), "cannot format value of type %q in f-string", partType)
+			}
+		}
+		return types.StringType
 	case *ast.UnaryExpression:
 		rightType := checker.inferExpression(node.Right, activeScope)
 		switch node.Operator {

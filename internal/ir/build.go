@@ -202,6 +202,19 @@ func (builder *Builder) buildExpression(expression ast.Expression) valueRef {
 		literalType := builder.literalType(node)
 		builder.emit(&Constant{Target: target, Type: literalType, Value: node.Value})
 		return valueRef{Name: target, Type: literalType}
+	case *ast.InterpolatedStringExpression:
+		target := builder.newTemp()
+		parts := make([]FormatPart, 0, len(node.Parts))
+		for _, part := range node.Parts {
+			if part.Expression == nil {
+				parts = append(parts, FormatPart{Text: part.Text})
+				continue
+			}
+			value := builder.buildExpression(part.Expression)
+			parts = append(parts, FormatPart{Value: value.Name, Type: value.Type})
+		}
+		builder.emit(&FormatString{Target: target, Parts: parts, Type: types.StringType})
+		return valueRef{Name: target, Type: types.StringType}
 	case *ast.UnaryExpression:
 		right := builder.buildExpression(node.Right)
 		zero := valueRef{}

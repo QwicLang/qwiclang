@@ -117,6 +117,35 @@ func TestRuntimeBackedPrintingBuildsAndRuns(t *testing.T) {
 `, "7\n1.500000\ntrue\nruntime\n")
 }
 
+func TestInterpolatedStringsBuildAndRun(t *testing.T) {
+	assertProgramOutput(t, `public func main() {
+    const name: string = "Qwic"
+    const count: int = 2
+    const ratio: float = 1.500000
+    const ready: bool = true
+
+    print(f"Hello, {name}: {count + 1}, {ratio}, {ready}")
+}
+`, "Hello, Qwic: 3, 1.500000, true\n")
+}
+
+func TestStandardStringsPackageBuildsAndRuns(t *testing.T) {
+	assertProgramOutput(t, `import strings
+
+public func main() {
+    const raw: string = "  QwicLang  "
+    const clean: string = strings.trim(raw)
+
+    print(strings.upper(clean))
+    print(strings.length(clean))
+    print(strings.contains(clean, "Lang"))
+    print(strings.startsWith(clean, "Qwic"))
+    print(strings.endsWith(clean, "Lang"))
+    print(strings.indexOf(clean, "Lang"))
+}
+`, "QWICLANG\n8\ntrue\ntrue\ntrue\n4\n")
+}
+
 func assertProgramOutput(t *testing.T, source string, want string) {
 	t.Helper()
 

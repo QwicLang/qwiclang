@@ -15,8 +15,8 @@ qwic --help
 
 ## Behavior
 
-- `build` compiles a source file and same-directory imports into a native
-  executable.
+- `build` compiles a source file, same-directory user imports, and imported
+  standard packages into a native executable.
 - `run` builds into a temporary executable, executes it, prints program output,
   and returns the program exit status.
 - `check` runs parsing, semantic analysis, and IR generation without producing
@@ -33,6 +33,7 @@ qwic --help
 
 ## Current Limits
 
-- Import resolution is same-directory only.
+- User import resolution is same-directory only. Standard packages such as
+  `strings` are resolved by the compiler.
 - The formatter is intentionally conservative and does not preserve comments.
 - `clean` only removes known v0 build artifacts.

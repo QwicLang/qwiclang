@@ -129,12 +129,15 @@ func TestLexStrings(t *testing.T) {
 	assertLexes(t, `"plain"
 "with \"quotes\""
 "line\nbreak"
+f"hello {name}"
 `, []expectedToken{
 		{"String", `"plain"`},
 		{"Newline", "\n"},
 		{"String", `"with \"quotes\""`},
 		{"Newline", "\n"},
 		{"String", `"line\nbreak"`},
+		{"Newline", "\n"},
+		{"FString", `f"hello {name}"`},
 		{"Newline", "\n"},
 		{"EOF", ""},
 	})

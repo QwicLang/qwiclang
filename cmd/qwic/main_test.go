@@ -64,6 +64,51 @@ func TestRunFmtFormatsSourceInPlace(t *testing.T) {
 	}
 }
 
+func TestRunBuildUsesBundledRuntimeOutsideRepoRoot(t *testing.T) {
+	tempDir := t.TempDir()
+	sourcePath := filepath.Join(tempDir, "main.qw")
+	outputPath := filepath.Join(tempDir, "main")
+	if err := os.WriteFile(sourcePath, []byte(`public func main() {
+    print("ok")
+}
+`), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+
+	previous, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("get cwd: %v", err)
+	}
+	defer os.Chdir(previous)
+	if err := os.Chdir(tempDir); err != nil {
+		t.Fatalf("chdir temp: %v", err)
+	}
+
+	if exitCode := run([]string{"build", sourcePath, "-o", outputPath}); exitCode != 0 {
+		t.Fatalf("build exit code = %d, want 0", exitCode)
+	}
+	if _, err := os.Stat(outputPath); err != nil {
+		t.Fatalf("expected executable output: %v", err)
+	}
+}
+
+func TestRunCheckResolvesStandardPackageWithoutLocalFile(t *testing.T) {
+	tempDir := t.TempDir()
+	sourcePath := filepath.Join(tempDir, "main.qw")
+	if err := os.WriteFile(sourcePath, []byte(`import strings
+
+public func main() {
+    print(strings.trim("  ok  "))
+}
+`), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+
+	if exitCode := run([]string{"check", sourcePath}); exitCode != 0 {
+		t.Fatalf("check exit code = %d, want 0", exitCode)
+	}
+}
+
 func TestRunCleanRemovesDefaultOutput(t *testing.T) {
 	tempDir := t.TempDir()
 	previous, err := os.Getwd()

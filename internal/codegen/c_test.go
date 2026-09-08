@@ -107,6 +107,46 @@ func TestBuildExecutableUsesRuntimeSource(t *testing.T) {
 	}
 }
 
+func TestGenerateCInterpolatedString(t *testing.T) {
+	module := buildIR(t, `public func main() {
+    const name: string = "Qwic"
+    const count: int = 2
+    print(f"Hello, {name}: {count + 1}")
+}
+`)
+
+	source, diagnostics := GenerateC(module)
+	if len(diagnostics) > 0 {
+		t.Fatalf("expected no diagnostics, got %v", diagnostics)
+	}
+	for _, want := range []string{
+		`snprintf(NULL, 0, "Hello, %s: %lld"`,
+		`qwic_alloc`,
+		`qwic_print_string`,
+	} {
+		if !strings.Contains(source, want) {
+			t.Fatalf("generated C missing %q:\n%s", want, source)
+		}
+	}
+}
+
+func TestGenerateCStandardStringsCall(t *testing.T) {
+	module := buildIR(t, `import strings
+
+public func main() {
+    print(strings.trim("  QwicLang  "))
+}
+`)
+
+	source, diagnostics := GenerateC(module)
+	if len(diagnostics) > 0 {
+		t.Fatalf("expected no diagnostics, got %v", diagnostics)
+	}
+	if !strings.Contains(source, "qwic_strings_trim") {
+		t.Fatalf("generated C missing stdlib runtime call:\n%s", source)
+	}
+}
+
 func runtimePath(t *testing.T) string {
 	t.Helper()
 	return filepath.Join("..", "..", "runtime")

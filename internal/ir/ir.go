@@ -137,6 +137,24 @@ func (instruction *Call) String() string {
 	return fmt.Sprintf("%scall %s(%s): %s", prefix, instruction.Function, strings.Join(instruction.Args, ", "), instruction.Type)
 }
 
+type FormatPart struct {
+	Text  string
+	Value string
+	Type  types.Type
+}
+
+type FormatString struct {
+	Target string
+	Parts  []FormatPart
+	Type   types.Type
+}
+
+func (*FormatString) instructionNode() {}
+
+func (instruction *FormatString) String() string {
+	return fmt.Sprintf("%s = format-string %d part(s): %s", instruction.Target, len(instruction.Parts), instruction.Type)
+}
+
 type Return struct {
 	Value string
 }

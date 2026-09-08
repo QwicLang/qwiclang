@@ -1,6 +1,8 @@
 package parser
 
 import (
+	"strings"
+
 	"qwiclang/internal/ast"
 	"qwiclang/internal/diagnostic"
 	"qwiclang/internal/lexer"
@@ -411,6 +413,8 @@ func (parser *Parser) parsePrimaryExpression() ast.Expression {
 		return &ast.LiteralExpression{Kind: ast.LiteralFloat, Value: current.Lexeme, Pos: current.Start}
 	case parser.match(token.String):
 		return &ast.LiteralExpression{Kind: ast.LiteralString, Value: current.Lexeme, Pos: current.Start}
+	case parser.match(token.FString):
+		return parser.parseInterpolatedString(current)
 	case parser.match(token.True, token.False):
 		return &ast.LiteralExpression{Kind: ast.LiteralBool, Value: current.Lexeme, Pos: current.Start}
 	case parser.match(token.Null):
@@ -426,6 +430,120 @@ func (parser *Parser) parsePrimaryExpression() ast.Expression {
 		}
 		return &ast.IdentifierExpression{Name: "<error>", Pos: current.Start}
 	}
+}
+
+func (parser *Parser) parseInterpolatedString(tok token.Token) ast.Expression {
+	body := strings.TrimSuffix(strings.TrimPrefix(tok.Lexeme, `f"`), `"`)
+	parts, diagnostics := parseInterpolatedStringParts(tok.Start, body)
+	parser.diagnostics = append(parser.diagnostics, diagnostics...)
+	return &ast.InterpolatedStringExpression{Parts: parts, Pos: tok.Start}
+}
+
+func parseInterpolatedStringParts(start token.Position, body string) ([]ast.InterpolatedStringPart, []Diagnostic) {
+	var parts []ast.InterpolatedStringPart
+	var diagnostics []Diagnostic
+	var text strings.Builder
+
+	flushText := func() {
+		if text.Len() == 0 {
+			return
+		}
+		parts = append(parts, ast.InterpolatedStringPart{Text: text.String()})
+		text.Reset()
+	}
+
+	for offset := 0; offset < len(body); offset++ {
+		switch body[offset] {
+		case '\\':
+			if offset+1 < len(body) {
+				offset++
+				text.WriteByte(decodedEscape(body[offset]))
+			} else {
+				text.WriteByte('\\')
+			}
+		case '{':
+			if offset+1 < len(body) && body[offset+1] == '{' {
+				text.WriteByte('{')
+				offset++
+				continue
+			}
+			flushText()
+			end := findInterpolationEnd(body, offset+1)
+			if end < 0 {
+				diagnostics = append(diagnostics, diagnostic.Error(start, "unterminated f-string interpolation"))
+				return parts, diagnostics
+			}
+			expressionSource := strings.TrimSpace(body[offset+1 : end])
+			if expressionSource == "" {
+				diagnostics = append(diagnostics, diagnostic.Error(start, "empty f-string interpolation"))
+				offset = end
+				continue
+			}
+			expression, expressionDiagnostics := parseExpressionFragment(start.Filename, expressionSource, start)
+			diagnostics = append(diagnostics, expressionDiagnostics...)
+			parts = append(parts, ast.InterpolatedStringPart{Expression: expression})
+			offset = end
+		case '}':
+			if offset+1 < len(body) && body[offset+1] == '}' {
+				text.WriteByte('}')
+				offset++
+				continue
+			}
+			diagnostics = append(diagnostics, diagnostic.Error(start, "single '}' is not allowed in f-string literal text"))
+		default:
+			text.WriteByte(body[offset])
+		}
+	}
+	flushText()
+	return parts, diagnostics
+}
+
+func decodedEscape(char byte) byte {
+	switch char {
+	case 'n':
+		return '\n'
+	case 'r':
+		return '\r'
+	case 't':
+		return '\t'
+	default:
+		return char
+	}
+}
+
+func findInterpolationEnd(body string, offset int) int {
+	for offset < len(body) {
+		if body[offset] == '\\' {
+			offset += 2
+			continue
+		}
+		if body[offset] == '}' {
+			return offset
+		}
+		offset++
+	}
+	return -1
+}
+
+func parseExpressionFragment(filename, source string, position token.Position) (ast.Expression, []Diagnostic) {
+	tokens, lexerDiagnostics := lexer.Lex(filename, source)
+	diagnostics := make([]Diagnostic, 0, len(lexerDiagnostics)+1)
+	for _, err := range lexerDiagnostics {
+		diagnostics = append(diagnostics, err)
+	}
+	if len(diagnostics) > 0 {
+		return &ast.IdentifierExpression{Name: "<error>", Pos: position}, diagnostics
+	}
+	parser := New(tokens)
+	expression := parser.parseExpression()
+	if !parser.check(token.EOF) {
+		parser.errorAtCurrent("expected end of f-string interpolation")
+	}
+	diagnostics = append(diagnostics, parser.diagnostics...)
+	if len(diagnostics) > 0 {
+		return &ast.IdentifierExpression{Name: "<error>", Pos: position}, diagnostics
+	}
+	return expression, nil
 }
 
 func binaryPrecedence(kind token.Kind) int {

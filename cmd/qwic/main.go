@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"qwiclang"
 	"qwiclang/internal/ast"
 	"qwiclang/internal/codegen"
 	"qwiclang/internal/diagnostic"
@@ -13,6 +14,7 @@ import (
 	"qwiclang/internal/ir"
 	"qwiclang/internal/parser"
 	"qwiclang/internal/sema"
+	"qwiclang/internal/stdlib"
 	"qwiclang/internal/token"
 )
 
@@ -174,6 +176,13 @@ func parseBuildArgs(args []string) (string, string, bool) {
 }
 
 func buildSource(sourcePath, outputPath string) int {
+	buildDir, err := os.MkdirTemp("", "qwic-build-*")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "create temporary build directory: %v\n", err)
+		return 1
+	}
+	defer os.RemoveAll(buildDir)
+
 	files, diagnostics := collectSourceFiles(sourcePath)
 	if len(diagnostics) > 0 {
 		printDiagnostics(diagnostics)
@@ -192,7 +201,13 @@ func buildSource(sourcePath, outputPath string) int {
 		return 1
 	}
 
-	if diagnostics := codegen.BuildExecutable(module, codegen.Options{OutputPath: outputPath, RuntimePath: runtimePath()}); len(diagnostics) > 0 {
+	runtimePath, err := qwiclang.WriteRuntime(buildDir)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "prepare bundled runtime: %v\n", err)
+		return 1
+	}
+
+	if diagnostics := codegen.BuildExecutable(module, codegen.Options{OutputPath: outputPath, WorkDir: buildDir, RuntimePath: runtimePath}); len(diagnostics) > 0 {
 		printDiagnostics(diagnostics)
 		return 1
 	}
@@ -204,10 +219,6 @@ func printDiagnostics(diagnostics []diagnostic.Diagnostic) {
 	for _, diagnostic := range diagnostics {
 		fmt.Fprintln(os.Stderr, diagnostic.Error())
 	}
-}
-
-func runtimePath() string {
-	return "runtime"
 }
 
 func collectSourceFiles(rootPath string) ([]sema.SourceFile, []diagnostic.Diagnostic) {
@@ -241,6 +252,9 @@ func collectSourceFiles(rootPath string) ([]sema.SourceFile, []diagnostic.Diagno
 		}
 
 		for _, importedModule := range importsFor(program) {
+			if stdlib.HasPackage(importedModule) {
+				continue
+			}
 			visit(filepath.Join(filepath.Dir(cleanPath), importedModule+".qw"))
 		}
 	}

@@ -25,9 +25,14 @@ The C backend currently supports the Phase 4 IR instruction set:
 - returns
 - conditional branches
 - jumps
+- formatted strings
 
 `print(value)` is emitted as a call into the Qwic runtime. It supports `int`,
 `float`, `nano`, `string`, and `bool` values.
+
+F-strings are lowered to a simple IR formatting instruction. The C backend emits
+a deterministic `snprintf` size pass, allocates the result with `qwic_alloc`,
+then writes the final string with a second `snprintf` call.
 
 ## CLI
 
@@ -48,3 +53,5 @@ or failed build unless the codegen API is called with `KeepC`.
   implemented in a later phase.
 - String literals preserve lexer spelling and are emitted directly as C string
   literals.
+- F-string formatting supports `int`, `float`, `nano`, `string`, and `bool`
+  values. Width, precision, and conversion specifiers are not implemented yet.

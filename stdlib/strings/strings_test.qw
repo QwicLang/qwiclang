@@ -1,0 +1,13 @@
+import strings
+
+public func main() {
+    const raw: string = "  QwicLang  "
+    const clean: string = strings.trim(raw)
+
+    print(strings.upper(clean))
+    print(strings.length(clean))
+    print(strings.contains(clean, "Lang"))
+    print(strings.startsWith(clean, "Qwic"))
+    print(strings.endsWith(clean, "Lang"))
+    print(strings.indexOf(clean, "Lang"))
+}

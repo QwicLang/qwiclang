@@ -22,6 +22,10 @@ lower it into IR.
 be checked before the runtime and code generator exist. It accepts one argument
 of any type and returns `void`.
 
+Imported standard-library package functions are also registered as builtin
+semantic symbols. They still require explicit imports, so `strings.trim(value)`
+is valid only after `import strings`.
+
 ## Type Rules
 
 The initial builtin types are:
@@ -47,8 +51,9 @@ typed as `nano`.
 
 ## Current Limits
 
-- There is no cross-file module boundary enforcement yet.
+- Cross-file module boundary enforcement currently covers function visibility.
 - Visibility is represented but not enforced for single-file programs.
-- `print` is the only builtin function.
+- `print` and the implemented standard-library package functions are builtin
+  symbols.
 - Type inference is local to initializer and expression trees.
 - Return path analysis is intentionally simple.

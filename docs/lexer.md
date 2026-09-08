@@ -22,7 +22,7 @@ The Phase 1 tests cover:
 - `const` and `let` variable declarations
 - function declarations with visibility and `turbo`
 - integer and floating-point literals
-- string literals and common escapes
+- string literals, f-string literals, and common escapes
 - arithmetic, comparison, assignment, and boolean operators
 - line and block comments
 - newlines and semicolons
@@ -58,12 +58,17 @@ type Error struct {
 ```
 
 `token.Kind` should format to stable names such as `Identifier`, `Integer`,
-`String`, `Public`, `Func`, `LParen`, `Newline`, and `EOF`. The parser can use
-the typed constants directly, while tests can compare the formatted names.
+`String`, `FString`, `Public`, `Func`, `LParen`, `Newline`, and `EOF`. The
+parser can use the typed constants directly, while tests can compare the
+formatted names.
 
 String token lexemes are expected to preserve the source spelling, including
 the surrounding quotes and escape sequences. Later compiler stages can decide
 where to unescape the value.
+
+F-string literals use the Python-style `f"Hello, {name}"` prefix form. The
+lexer emits the whole literal as one `FString` token; the parser is responsible
+for splitting literal text from interpolation expressions.
 
 ## Notes
 

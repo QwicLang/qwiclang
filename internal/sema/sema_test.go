@@ -112,6 +112,52 @@ func TestCheckAllowsNanoArithmeticWithIntegerScalar(t *testing.T) {
 `)
 }
 
+func TestCheckAllowsInterpolatedStringExpressions(t *testing.T) {
+	checkValid(t, `func main() {
+    const name: string = "Qwic"
+    const count: int = 2
+    const message: string = f"{name} has {count + 1} values"
+    print(message)
+}
+`)
+}
+
+func TestCheckRejectsUnknownInterpolatedVariable(t *testing.T) {
+	assertDiagnostic(t, `func main() {
+    print(f"Hello, {missing}")
+}
+`, "unknown variable \"missing\"")
+}
+
+func TestCheckAllowsImportedStandardStringsPackage(t *testing.T) {
+	checkValid(t, `import strings
+
+func main() {
+    const clean: string = strings.trim("  QwicLang  ")
+    const length: int = strings.length(clean)
+    const hasLang: bool = strings.contains(clean, "Lang")
+    print(length)
+    print(hasLang)
+}
+`)
+}
+
+func TestCheckRejectsStandardPackageWithoutImport(t *testing.T) {
+	assertDiagnostic(t, `func main() {
+    print(strings.trim("  QwicLang  "))
+}
+`, "module \"strings\" is not imported")
+}
+
+func TestCheckRejectsWrongStandardPackageArgumentType(t *testing.T) {
+	assertDiagnostic(t, `import strings
+
+func main() {
+    print(strings.length(42))
+}
+`, "cannot pass argument of type \"int\" to parameter \"value\" of type \"string\"")
+}
+
 func TestCheckAllowsPublicImportedModuleFunction(t *testing.T) {
 	result, diagnostics := CheckFiles([]SourceFile{
 		{Filename: "main.qw", Source: `import users

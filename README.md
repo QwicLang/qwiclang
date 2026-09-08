@@ -42,6 +42,7 @@ Implemented today:
 - variables with `const` and `let`
 - primitive types: `void`, `bool`, `int`, `float`, `nano`, `string`
 - functions, parameters, calls, and returns
+- Python-style f-string interpolation with `{expression}` placeholders
 - arithmetic and comparisons
 - boolean expressions
 - `if` / `else`
@@ -49,10 +50,12 @@ Implemented today:
 - basic `nano` support
 - same-directory modules and imports
 - `public` / `private` function visibility checks
+- standard `strings` package
 
 Still intentionally deferred:
 
 - final LLVM backend
+- most standard-library packages beyond the initial `strings` package
 - package registry
 - advanced module paths
 - generics
@@ -74,14 +77,26 @@ Prerequisites:
 Build the compiler:
 
 ```bash
-go build ./cmd/qwic
+go build -o qwic ./cmd/qwic
 ```
 
-Run the compiler directly during development:
+Install it somewhere on your `PATH`, for example:
 
 ```bash
-go run ./cmd/qwic --help
+mkdir -p ~/go/bin
+mv qwic ~/go/bin/qwic
 ```
+
+Then verify it:
+
+```bash
+qwic --help
+```
+
+The `qwic` binary includes the small bootstrap runtime sources it needs during
+compilation, so it does not need to be run from the repository root. You still
+need a system C compiler available as `cc`, because v0 currently lowers Qwic IR
+to C before producing a native executable.
 
 ## Quick Start
 
@@ -96,7 +111,7 @@ public func main() {
 Run it:
 
 ```bash
-go run ./cmd/qwic run hello.qw
+qwic run hello.qw
 ```
 
 Expected output:
@@ -108,7 +123,7 @@ Hello, Qwic
 Build a native executable:
 
 ```bash
-go run ./cmd/qwic build hello.qw -o hello
+qwic build hello.qw -o hello
 ./hello
 ```
 
