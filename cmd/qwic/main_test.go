@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
@@ -68,6 +69,12 @@ func TestRunBuildUsesBundledRuntimeOutsideRepoRoot(t *testing.T) {
 	tempDir := t.TempDir()
 	sourcePath := filepath.Join(tempDir, "main.qw")
 	outputPath := filepath.Join(tempDir, "main")
+	
+	// On Windows, add .exe extension
+	if runtime.GOOS == "windows" {
+		outputPath += ".exe"
+	}
+	
 	if err := os.WriteFile(sourcePath, []byte(`public func main() {
     print("ok")
 }
