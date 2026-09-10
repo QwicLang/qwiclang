@@ -4,6 +4,7 @@ import (
 	"embed"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 )
 
@@ -19,7 +20,7 @@ func WriteRuntime(dir string) (string, error) {
 	}
 
 	for _, name := range []string{"qwic_runtime.c", "qwic_runtime.h"} {
-		data, err := runtimeFiles.ReadFile(filepath.Join("runtime", name))
+		data, err := runtimeFiles.ReadFile(path.Join("runtime", name))
 		if err != nil {
 			return "", fmt.Errorf("read bundled runtime %s: %w", name, err)
 		}

@@ -437,11 +437,16 @@ func RunExecutable(path string) (int, string, error) {
 	command.Stdout = &output
 	command.Stderr = &output
 	err := command.Run()
+
+	// Normalize Windows \r\n line endings to \n so callers receive
+	// consistent output regardless of platform.
+	normalized := strings.ReplaceAll(output.String(), "\r\n", "\n")
+
 	if err == nil {
-		return 0, output.String(), nil
+		return 0, normalized, nil
 	}
 	if exitErr, ok := err.(*exec.ExitError); ok {
-		return exitErr.ExitCode(), output.String(), nil
+		return exitErr.ExitCode(), normalized, nil
 	}
-	return 1, output.String(), err
+	return 1, normalized, err
 }
