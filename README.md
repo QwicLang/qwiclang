@@ -1,7 +1,4 @@
-<p align="center">
-  <img src="image/readme-banner.png" alt="QwicLang - Fast. Native. Precise." width="100%">
-</p>
-
+![Qwic](https://github.com/QwicLang/qwiclang/blob/main/image/readme-banner.png)
 # QwicLang
 
 QwicLang is an experimental systems programming language focused on readable
