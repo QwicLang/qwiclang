@@ -211,6 +211,8 @@ func (parser *Parser) parseStatement() ast.Statement {
 		return parser.parseIfStatement(parser.previous().Start)
 	case parser.match(token.While):
 		return parser.parseWhileStatement(parser.previous().Start)
+	case parser.match(token.For):
+		return parser.parseForStatement(parser.previous().Start)
 	default:
 		return parser.parseAssignmentOrExpressionStatement()
 	}
@@ -299,6 +301,35 @@ func (parser *Parser) parseWhileStatement(start token.Position) ast.Statement {
 	}
 }
 
+// parseForStatement parses: for variable in iterable { ... }
+func (parser *Parser) parseForStatement(start token.Position) ast.Statement {
+	variable, ok := parser.consumeIdentifier("expected variable name in for loop")
+	if !ok {
+		parser.synchronizeStatement()
+		return nil
+	}
+
+	if !parser.match(token.In) {
+		parser.errorAtCurrent("expected 'in' in for loop")
+		parser.synchronizeStatement()
+		return nil
+	}
+
+	iterable := parser.parseExpression()
+	body := parser.parseBlock()
+	if body == nil {
+		parser.synchronizeStatement()
+		return nil
+	}
+
+	return &ast.ForStatement{
+		Variable: variable.Lexeme,
+		Iterable: iterable,
+		Body:     body,
+		Pos:      start,
+	}
+}
+
 func (parser *Parser) parseAssignmentOrExpressionStatement() ast.Statement {
 	start := parser.peek().Start
 	if parser.check(token.Identifier) && parser.checkNext(token.Assign) {
@@ -365,6 +396,20 @@ func (parser *Parser) parseCallExpression() ast.Expression {
 	expression := parser.parsePrimaryExpression()
 
 	for {
+		// Index access: collection[index]
+		if parser.match(token.LBracket) {
+			start := parser.previous().Start
+			index := parser.parseExpression()
+			parser.consume(token.RBracket, "expected ']' after index")
+			expression = &ast.IndexExpression{
+				Left:  expression,
+				Index: index,
+				Pos:   start,
+			}
+			continue
+		}
+
+		// Dot selector
 		if parser.match(token.Dot) {
 			name, ok := parser.consumeIdentifier("expected selector name after '.'")
 			if !ok {
@@ -377,6 +422,8 @@ func (parser *Parser) parseCallExpression() ast.Expression {
 			}
 			continue
 		}
+
+		// Function call
 		if !parser.match(token.LParen) {
 			break
 		}
@@ -419,10 +466,12 @@ func (parser *Parser) parsePrimaryExpression() ast.Expression {
 		return &ast.LiteralExpression{Kind: ast.LiteralBool, Value: current.Lexeme, Pos: current.Start}
 	case parser.match(token.Null):
 		return &ast.LiteralExpression{Kind: ast.LiteralNull, Value: current.Lexeme, Pos: current.Start}
+	case parser.match(token.LBracket):
+		return parser.parseArrayLiteral(current.Start)
+	case parser.match(token.LBrace):
+		return parser.parseDictionaryLiteral(current.Start)
 	case parser.match(token.LParen):
-		expression := parser.parseExpression()
-		parser.consume(token.RParen, "expected ')' after expression")
-		return expression
+		return parser.parseTupleLiteral(current.Start)
 	default:
 		parser.errorAtCurrent("expected expression")
 		if !parser.isAtEnd() {
@@ -430,6 +479,82 @@ func (parser *Parser) parsePrimaryExpression() ast.Expression {
 		}
 		return &ast.IdentifierExpression{Name: "<error>", Pos: current.Start}
 	}
+}
+
+// parseArrayLiteral parses: [1, 2, "a", "b"]
+func (parser *Parser) parseArrayLiteral(start token.Position) ast.Expression {
+	var elements []ast.Expression
+
+	if !parser.check(token.RBracket) {
+		for {
+			elements = append(elements, parser.parseExpression())
+			if !parser.match(token.Comma) {
+				break
+			}
+		}
+	}
+
+	parser.consume(token.RBracket, "expected ']' after array elements")
+	return &ast.ArrayLiteralExpression{Elements: elements, Pos: start}
+}
+
+// parseDictionaryLiteral parses: {"a": 1, "b": 2}
+func (parser *Parser) parseDictionaryLiteral(start token.Position) ast.Expression {
+	var pairs []ast.DictionaryPair
+
+	if !parser.check(token.RBrace) {
+		for {
+			key := parser.parseExpression()
+			parser.consume(token.Colon, "expected ':' after dictionary key")
+			value := parser.parseExpression()
+			pairs = append(pairs, ast.DictionaryPair{Key: key, Value: value})
+
+			if !parser.match(token.Comma) {
+				break
+			}
+		}
+	}
+
+	parser.consume(token.RBrace, "expected '}' after dictionary pairs")
+	return &ast.DictionaryLiteralExpression{Pairs: pairs, Pos: start}
+}
+
+// parseTupleLiteral parses: (1, 2, 3, 4)
+// Distinguishes between (expr) which is a grouped expression and (expr, ...) which is a tuple
+func (parser *Parser) parseTupleLiteral(start token.Position) ast.Expression {
+	var elements []ast.Expression
+
+	if !parser.check(token.RParen) {
+		elements = append(elements, parser.parseExpression())
+
+		// If only one element and no comma, it's a grouped expression
+		if parser.check(token.RParen) {
+			parser.consume(token.RParen, "expected ')' after expression")
+			return elements[0]
+		}
+
+		// If comma follows, it's a tuple
+		if !parser.match(token.Comma) {
+			parser.errorAtCurrent("expected ',' or ')' in tuple")
+			parser.consume(token.RParen, "expected ')' after tuple element")
+			return &ast.TupleLiteralExpression{Elements: elements, Pos: start}
+		}
+
+		// Parse remaining elements
+		if !parser.check(token.RParen) {
+			elements = append(elements, parser.parseExpression())
+		}
+
+		for parser.match(token.Comma) {
+			if parser.check(token.RParen) {
+				break
+			}
+			elements = append(elements, parser.parseExpression())
+		}
+	}
+
+	parser.consume(token.RParen, "expected ')' after tuple elements")
+	return &ast.TupleLiteralExpression{Elements: elements, Pos: start}
 }
 
 func (parser *Parser) parseInterpolatedString(tok token.Token) ast.Expression {
