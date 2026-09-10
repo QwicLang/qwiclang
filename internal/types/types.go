@@ -10,6 +10,10 @@ const (
 	Float
 	Nano
 	String
+	List
+	Set
+	Dictionary
+	Tuple
 	Null
 	Any
 )
@@ -26,6 +30,10 @@ var (
 	FloatType   = Type{Kind: Float}
 	NanoType    = Type{Kind: Nano}
 	StringType  = Type{Kind: String}
+	ListType    = Type{Kind: List}
+	SetType     = Type{Kind: Set}
+	DictType    = Type{Kind: Dictionary}
+	TupleType   = Type{Kind: Tuple}
 	NullType    = Type{Kind: Null}
 	AnyType     = Type{Kind: Any}
 )
@@ -44,6 +52,14 @@ func Lookup(name string) (Type, bool) {
 		return NanoType, true
 	case "string":
 		return StringType, true
+	case "list":
+		return ListType, true
+	case "set":
+		return SetType, true
+	case "dictionary":
+		return DictType, true
+	case "tuple":
+		return TupleType, true
 	default:
 		return InvalidType, false
 	}
@@ -63,6 +79,14 @@ func (typ Type) String() string {
 		return "nano"
 	case String:
 		return "string"
+	case List:
+		return "list"
+	case Set:
+		return "set"
+	case Dictionary:
+		return "dictionary"
+	case Tuple:
+		return "tuple"
 	case Null:
 		return "null"
 	case Any:

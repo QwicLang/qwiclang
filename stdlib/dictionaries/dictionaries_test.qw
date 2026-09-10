@@ -1,0 +1,11 @@
+import dictionaries
+
+public func main() {
+    const values: dictionary = dictionaries.new()
+    dictionaries.set(values, "name", "Qwic")
+    dictionaries.set(values, "kind", "language")
+
+    print(dictionaries.length(values))
+    print(dictionaries.get(values, "kind"))
+    print(dictionaries.contains(values, "name"))
+}

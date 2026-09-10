@@ -29,4 +29,26 @@ bool qwic_strings_starts_with(const char *value, const char *prefix);
 bool qwic_strings_ends_with(const char *value, const char *suffix);
 int64_t qwic_strings_index_of(const char *value, const char *needle);
 
+void *qwic_lists_new(void);
+void qwic_lists_push(void *list, const char *value);
+const char *qwic_lists_get(void *list, int64_t index);
+int64_t qwic_lists_length(void *list);
+bool qwic_lists_contains(void *list, const char *value);
+
+void *qwic_sets_new(void);
+void qwic_sets_add(void *set, const char *value);
+bool qwic_sets_contains(void *set, const char *value);
+int64_t qwic_sets_length(void *set);
+
+void *qwic_dictionaries_new(void);
+void qwic_dictionaries_set(void *dictionary, const char *key, const char *value);
+const char *qwic_dictionaries_get(void *dictionary, const char *key);
+bool qwic_dictionaries_contains(void *dictionary, const char *key);
+int64_t qwic_dictionaries_length(void *dictionary);
+
+void *qwic_tuples_new2(const char *first, const char *second);
+const char *qwic_tuples_first(void *tuple);
+const char *qwic_tuples_second(void *tuple);
+int64_t qwic_tuples_length(void *tuple);
+
 #endif

@@ -36,6 +36,10 @@ The initial builtin types are:
 - `float`
 - `nano`
 - `string`
+- `list`
+- `set`
+- `dictionary`
+- `tuple`
 
 Integer literals infer as `int`, decimal literals infer as `float`, string
 literals infer as `string`, `true` and `false` infer as `bool`, and `null`
@@ -48,6 +52,10 @@ literal implementation is designed.
 
 `nano` arithmetic also accepts integer scalar operands, so `delta * 2` remains
 typed as `nano`.
+
+The collection types are opaque runtime-backed handles in v0. They are created
+and used through explicit standard packages such as `lists`, `sets`,
+`dictionaries`, and `tuples`.
 
 ## Current Limits
 

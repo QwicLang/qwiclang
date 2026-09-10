@@ -1,0 +1,10 @@
+import sets
+
+public func main() {
+    const names: set = sets.new()
+    sets.add(names, "Qwic")
+    sets.add(names, "Qwic")
+
+    print(sets.length(names))
+    print(sets.contains(names, "Qwic"))
+}

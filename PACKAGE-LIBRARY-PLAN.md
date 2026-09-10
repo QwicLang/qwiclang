@@ -116,6 +116,55 @@ Current `strings` limitations:
   lifetime semantics are not designed yet.
 * APIs that require arrays, bytes, or richer slicing are still deferred.
 
+### Bootstrap data structures
+
+The `data-structure` branch adds the first runtime-backed collection packages:
+
+```text
+lists
+sets
+dictionaries
+tuples
+```
+
+Implemented API:
+
+```text
+lists.new(): list
+lists.push(list: list, value: string): void
+lists.get(list: list, index: int): string
+lists.length(list: list): int
+lists.contains(list: list, value: string): bool
+
+sets.new(): set
+sets.add(set: set, value: string): void
+sets.contains(set: set, value: string): bool
+sets.length(set: set): int
+
+dictionaries.new(): dictionary
+dictionaries.set(dictionary: dictionary, key: string, value: string): void
+dictionaries.get(dictionary: dictionary, key: string): string
+dictionaries.contains(dictionary: dictionary, key: string): bool
+dictionaries.length(dictionary: dictionary): int
+
+tuples.new2(first: string, second: string): tuple
+tuples.first(tuple: tuple): string
+tuples.second(tuple: tuple): string
+tuples.length(tuple: tuple): int
+```
+
+Current data-structure limitations:
+
+* Collections store strings only. Generic element types require a real generic
+  type system or a designed `any` container model.
+* Dictionaries use string keys and string values only.
+* Tuples currently model fixed pairs only. Literal tuple syntax and typed arity
+  are deferred.
+* Missing keys and out-of-range indexes return an empty string until Qwic has a
+  standard result/error model.
+* The runtime uses simple linear storage. Hash tables and more advanced storage
+  policies are deferred until correctness and API shape are settled.
+
 ## Not Yet Implemented
 
 The remaining packages are deliberately not exposed yet. Adding stubs would make

@@ -1,0 +1,11 @@
+import lists
+
+public func main() {
+    const names: list = lists.new()
+    lists.push(names, "Qwic")
+    lists.push(names, "Lang")
+
+    print(lists.length(names))
+    print(lists.get(names, 1))
+    print(lists.contains(names, "Qwic"))
+}

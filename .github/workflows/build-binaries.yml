@@ -1,0 +1,70 @@
+name: Build binaries
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-amd64
+            os: ubuntu-latest
+            artifact: qwic-linux-amd64
+            binary: qwic
+          - name: windows-amd64
+            os: windows-latest
+            artifact: qwic-windows-amd64
+            binary: qwic.exe
+          - name: macos-amd64
+            os: macos-13
+            artifact: qwic-macos-amd64
+            binary: qwic
+          - name: macos-arm64
+            os: macos-latest
+            artifact: qwic-macos-arm64
+            binary: qwic
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Set up Windows C compiler
+        if: runner.os == 'Windows'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: mingw-w64-ucrt-x86_64-gcc
+          path-type: inherit
+
+      - name: Verify C compiler
+        run: cc --version
+
+      - name: Test
+        run: go test ./...
+
+      - name: Build qwic
+        run: go build -trimpath -o dist/${{ matrix.binary }} ./cmd/qwic
+
+      - name: Upload binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: dist/${{ matrix.binary }}

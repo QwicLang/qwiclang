@@ -3,7 +3,7 @@ package types
 import "testing"
 
 func TestLookupBuiltins(t *testing.T) {
-	for _, name := range []string{"void", "bool", "int", "float", "nano", "string"} {
+	for _, name := range []string{"void", "bool", "int", "float", "nano", "string", "list", "set", "dictionary", "tuple"} {
 		if _, ok := Lookup(name); !ok {
 			t.Fatalf("expected builtin type %q", name)
 		}

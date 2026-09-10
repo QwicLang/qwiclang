@@ -147,6 +147,30 @@ public func main() {
 	}
 }
 
+func TestGenerateCDataStructureCalls(t *testing.T) {
+	module := buildIR(t, `import lists
+import dictionaries
+
+public func main() {
+    const names: list = lists.new()
+    lists.push(names, "Qwic")
+    const values: dictionary = dictionaries.new()
+    dictionaries.set(values, "name", lists.get(names, 0))
+    print(dictionaries.get(values, "name"))
+}
+`)
+
+	source, diagnostics := GenerateC(module)
+	if len(diagnostics) > 0 {
+		t.Fatalf("expected no diagnostics, got %v", diagnostics)
+	}
+	for _, want := range []string{"qwic_lists_new", "qwic_lists_push", "qwic_dictionaries_set"} {
+		if !strings.Contains(source, want) {
+			t.Fatalf("generated C missing %q:\n%s", want, source)
+		}
+	}
+}
+
 func runtimePath(t *testing.T) string {
 	t.Helper()
 	return filepath.Join("..", "..", "runtime")
