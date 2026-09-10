@@ -1,0 +1,9 @@
+import tuples
+
+public func main() {
+    const pair: tuple = tuples.new2("Qwic", "language")
+
+    print(tuples.first(pair))
+    print(tuples.second(pair))
+    print(tuples.length(pair))
+}

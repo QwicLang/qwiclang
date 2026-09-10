@@ -40,7 +40,8 @@ Implemented today:
 - small C runtime
 - CLI commands for build, run, check, fmt, and clean
 - variables with `const` and `let`
-- primitive types: `void`, `bool`, `int`, `float`, `nano`, `string`
+- primitive types: `void`, `bool`, `int`, `float`, `nano`, `string`, `list`,
+  `set`, `dictionary`, `tuple`
 - functions, parameters, calls, and returns
 - Python-style f-string interpolation with `{expression}` placeholders
 - arithmetic and comparisons
@@ -51,11 +52,13 @@ Implemented today:
 - same-directory modules and imports
 - `public` / `private` function visibility checks
 - standard `strings` package
+- bootstrap data-structure packages: `lists`, `sets`, `dictionaries`, `tuples`
 
 Still intentionally deferred:
 
 - final LLVM backend
-- most standard-library packages beyond the initial `strings` package
+- most standard-library packages beyond the initial string and data-structure
+  packages
 - package registry
 - advanced module paths
 - generics

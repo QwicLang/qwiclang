@@ -158,6 +158,49 @@ func main() {
 `, "cannot pass argument of type \"int\" to parameter \"value\" of type \"string\"")
 }
 
+func TestCheckAllowsImportedDataStructurePackages(t *testing.T) {
+	checkValid(t, `import lists
+import sets
+import dictionaries
+import tuples
+
+func main() {
+    const names: list = lists.new()
+    lists.push(names, "Qwic")
+    const first: string = lists.get(names, 0)
+
+    const unique: set = sets.new()
+    sets.add(unique, first)
+    const hasQwic: bool = sets.contains(unique, "Qwic")
+
+    const values: dictionary = dictionaries.new()
+    dictionaries.set(values, "name", first)
+    const name: string = dictionaries.get(values, "name")
+
+    const pair: tuple = tuples.new2(name, "Lang")
+    print(tuples.first(pair))
+    print(hasQwic)
+}
+`)
+}
+
+func TestCheckRejectsDataStructurePackageWithoutImport(t *testing.T) {
+	assertDiagnostic(t, `func main() {
+    const names: list = lists.new()
+}
+`, "module \"lists\" is not imported")
+}
+
+func TestCheckRejectsWrongDataStructureValueType(t *testing.T) {
+	assertDiagnostic(t, `import lists
+
+func main() {
+    const values: list = lists.new()
+    lists.push(values, 42)
+}
+`, "cannot pass argument of type \"int\" to parameter \"value\" of type \"string\"")
+}
+
 func TestCheckAllowsPublicImportedModuleFunction(t *testing.T) {
 	result, diagnostics := CheckFiles([]SourceFile{
 		{Filename: "main.qw", Source: `import users

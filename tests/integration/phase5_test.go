@@ -146,6 +146,38 @@ public func main() {
 `, "QWICLANG\n8\ntrue\ntrue\ntrue\n4\n")
 }
 
+func TestDataStructurePackagesBuildAndRun(t *testing.T) {
+	assertProgramOutput(t, `import lists
+import sets
+import dictionaries
+import tuples
+
+public func main() {
+    const names: list = lists.new()
+    lists.push(names, "Qwic")
+    lists.push(names, "Lang")
+
+    const unique: set = sets.new()
+    sets.add(unique, "Qwic")
+    sets.add(unique, "Qwic")
+
+    const values: dictionary = dictionaries.new()
+    dictionaries.set(values, "name", lists.get(names, 0))
+    dictionaries.set(values, "kind", "language")
+
+    const pair: tuple = tuples.new2(dictionaries.get(values, "name"), dictionaries.get(values, "kind"))
+
+    print(lists.length(names))
+    print(lists.get(names, 1))
+    print(sets.length(unique))
+    print(sets.contains(unique, "Qwic"))
+    print(dictionaries.length(values))
+    print(dictionaries.get(values, "kind"))
+    print(f"{tuples.first(pair)}:{tuples.second(pair)}:{tuples.length(pair)}")
+}
+`, "2\nLang\n1\ntrue\n2\nlanguage\nQwic:language:2\n")
+}
+
 func assertProgramOutput(t *testing.T, source string, want string) {
 	t.Helper()
 

@@ -309,6 +309,8 @@ func cType(typ types.Type) string {
 		return "double"
 	case types.String:
 		return "const char *"
+	case types.List, types.Set, types.Dictionary, types.Tuple:
+		return "void *"
 	default:
 		return "void *"
 	}
@@ -368,6 +370,8 @@ func zeroValue(typ types.Type) string {
 		return "0.0"
 	case types.String:
 		return "\"\""
+	case types.List, types.Set, types.Dictionary, types.Tuple:
+		return "NULL"
 	default:
 		return "0"
 	}

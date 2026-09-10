@@ -34,6 +34,10 @@ F-strings are lowered to a simple IR formatting instruction. The C backend emits
 a deterministic `snprintf` size pass, allocates the result with `qwic_alloc`,
 then writes the final string with a second `snprintf` call.
 
+Standard-library data-structure calls are lowered to runtime C functions. The
+opaque collection types are emitted as `void *` handles in the bootstrap C
+backend.
+
 ## CLI
 
 ```bash
@@ -55,3 +59,5 @@ or failed build unless the codegen API is called with `KeepC`.
   literals.
 - F-string formatting supports `int`, `float`, `nano`, `string`, and `bool`
   values. Width, precision, and conversion specifiers are not implemented yet.
+- Data-structure packages store strings only and use opaque runtime pointers in
+  generated C.
