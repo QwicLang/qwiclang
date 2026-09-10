@@ -23,6 +23,8 @@ const (
 	If
 	Else
 	While
+	For
+	In
 	Struct
 	Import
 	Module
@@ -86,6 +88,8 @@ var keywords = map[string]Kind{
 	"if":      If,
 	"else":    Else,
 	"while":   While,
+	"for":     For,
+	"in":      In,
 	"struct":  Struct,
 	"import":  Import,
 	"module":  Module,
@@ -140,6 +144,10 @@ func (kind Kind) String() string {
 		return "Else"
 	case While:
 		return "While"
+	case For:
+		return "For"
+	case In:
+		return "In"
 	case Struct:
 		return "Struct"
 	case Import:
