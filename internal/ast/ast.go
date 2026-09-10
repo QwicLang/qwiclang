@@ -187,6 +187,20 @@ func (statement *WhileStatement) Position() token.Position {
 	return statement.Pos
 }
 
+// ForStatement represents: for variable in iterable { ... }
+type ForStatement struct {
+	Variable string
+	Iterable Expression
+	Body     *BlockStatement
+	Pos      token.Position
+}
+
+func (*ForStatement) statementNode() {}
+
+func (statement *ForStatement) Position() token.Position {
+	return statement.Pos
+}
+
 type IdentifierExpression struct {
 	Name string
 	Pos  token.Position
@@ -302,6 +316,61 @@ func (expression *CallExpression) Position() token.Position {
 	return expression.Pos
 }
 
+// ArrayLiteralExpression represents: [1, 2, "a", "b"]
+type ArrayLiteralExpression struct {
+	Elements []Expression
+	Pos      token.Position
+}
+
+func (*ArrayLiteralExpression) expressionNode() {}
+
+func (expression *ArrayLiteralExpression) Position() token.Position {
+	return expression.Pos
+}
+
+// DictionaryPair represents a key-value pair in a dictionary literal
+type DictionaryPair struct {
+	Key   Expression
+	Value Expression
+}
+
+// DictionaryLiteralExpression represents: {"a": 1, "b": 2}
+type DictionaryLiteralExpression struct {
+	Pairs []DictionaryPair
+	Pos   token.Position
+}
+
+func (*DictionaryLiteralExpression) expressionNode() {}
+
+func (expression *DictionaryLiteralExpression) Position() token.Position {
+	return expression.Pos
+}
+
+// TupleLiteralExpression represents: (1, 2, 3, 4)
+type TupleLiteralExpression struct {
+	Elements []Expression
+	Pos      token.Position
+}
+
+func (*TupleLiteralExpression) expressionNode() {}
+
+func (expression *TupleLiteralExpression) Position() token.Position {
+	return expression.Pos
+}
+
+// IndexExpression represents: collection[index]
+type IndexExpression struct {
+	Left  Expression
+	Index Expression
+	Pos   token.Position
+}
+
+func (*IndexExpression) expressionNode() {}
+
+func (expression *IndexExpression) Position() token.Position {
+	return expression.Pos
+}
+
 func writeNode(builder *strings.Builder, node Node, indent int) {
 	prefix := strings.Repeat("  ", indent)
 	switch n := node.(type) {
@@ -354,6 +423,10 @@ func writeNode(builder *strings.Builder, node Node, indent int) {
 		builder.WriteString(prefix + "WhileStatement\n")
 		writeNode(builder, n.Condition, indent+1)
 		writeNode(builder, n.Body, indent+1)
+	case *ForStatement:
+		fmt.Fprintf(builder, "%sForStatement variable=%s\n", prefix, n.Variable)
+		writeNode(builder, n.Iterable, indent+1)
+		writeNode(builder, n.Body, indent+1)
 	case *IdentifierExpression:
 		fmt.Fprintf(builder, "%sIdentifierExpression name=%s\n", prefix, n.Name)
 	case *SelectorExpression:
@@ -384,6 +457,27 @@ func writeNode(builder *strings.Builder, node Node, indent int) {
 		for _, argument := range n.Arguments {
 			writeNode(builder, argument, indent+1)
 		}
+	case *ArrayLiteralExpression:
+		fmt.Fprintf(builder, "%sArrayLiteralExpression (length=%d)\n", prefix, len(n.Elements))
+		for _, elem := range n.Elements {
+			writeNode(builder, elem, indent+1)
+		}
+	case *DictionaryLiteralExpression:
+		fmt.Fprintf(builder, "%sDictionaryLiteralExpression (length=%d)\n", prefix, len(n.Pairs))
+		for _, pair := range n.Pairs {
+			builder.WriteString(prefix + "  Pair\n")
+			writeNode(builder, pair.Key, indent+2)
+			writeNode(builder, pair.Value, indent+2)
+		}
+	case *TupleLiteralExpression:
+		fmt.Fprintf(builder, "%sTupleLiteralExpression (length=%d)\n", prefix, len(n.Elements))
+		for _, elem := range n.Elements {
+			writeNode(builder, elem, indent+1)
+		}
+	case *IndexExpression:
+		builder.WriteString(prefix + "IndexExpression\n")
+		writeNode(builder, n.Left, indent+1)
+		writeNode(builder, n.Index, indent+1)
 	default:
 		fmt.Fprintf(builder, "%s<unknown %T>\n", prefix, n)
 	}
