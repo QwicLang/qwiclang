@@ -174,6 +174,53 @@ var functions = []Function{
 		ReturnType:  types.VoidType,
 	},
 	{
+		Package:     "crypto",
+		Name:        "sha256",
+		RuntimeName: "qwic_crypto_sha256",
+		Parameters:  []Parameter{{Name: "value", Type: types.StringType}},
+		ReturnType:  types.StringType,
+	},
+	{
+		Package:     "crypto",
+		Name:        "sha512",
+		RuntimeName: "qwic_crypto_sha512",
+		Parameters:  []Parameter{{Name: "value", Type: types.StringType}},
+		ReturnType:  types.StringType,
+	},
+	{
+		Package:     "crypto",
+		Name:        "random_bytes",
+		RuntimeName: "qwic_crypto_random_bytes",
+		Parameters:  []Parameter{{Name: "len", Type: types.IntType}},
+		ReturnType:  types.StringType,
+	},
+	{
+		Package:     "crypto",
+		Name:        "random_int",
+		RuntimeName: "qwic_crypto_random_int",
+		ReturnType:  types.IntType,
+	},
+	{
+		Package:     "crypto",
+		Name:        "hex_encode",
+		RuntimeName: "qwic_crypto_hex_encode",
+		Parameters:  []Parameter{
+			{Name: "bytes", Type: types.StringType},
+			{Name: "len", Type: types.IntType},
+		},
+		ReturnType:  types.StringType,
+	},
+	{
+		Package:     "crypto",
+		Name:        "base64_encode",
+		RuntimeName: "qwic_crypto_base64_encode",
+		Parameters:  []Parameter{
+			{Name: "bytes", Type: types.StringType},
+			{Name: "len", Type: types.IntType},
+		},
+		ReturnType:  types.StringType,
+	},
+	{
 		Package:     "lists",
 		Name:        "new",
 		RuntimeName: "qwic_lists_new",

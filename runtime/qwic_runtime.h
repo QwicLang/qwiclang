@@ -42,6 +42,14 @@ void qwic_sync_mutex_lock(void *mutex);
 void qwic_sync_mutex_unlock(void *mutex);
 void qwic_sync_mutex_free(void *mutex);
 
+// Crypto
+char *qwic_crypto_sha256(const char *value);
+char *qwic_crypto_sha512(const char *value);
+char *qwic_crypto_random_bytes(int len);
+int64_t qwic_crypto_random_int(void);
+char *qwic_crypto_hex_encode(const char *bytes, int len);
+char *qwic_crypto_base64_encode(const char *bytes, int len);
+
 void *qwic_lists_new(void);
 void qwic_lists_push(void *list, const char *value);
 const char *qwic_lists_get(void *list, int64_t index);
