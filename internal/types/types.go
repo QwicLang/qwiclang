@@ -121,4 +121,3 @@ func Compatible(target, value Type) bool {
 	// without pretending full fixed-point literal typing is implemented yet.
 	return target.Kind == Nano && value.Kind == Float
 }
-buzzIoX2021!

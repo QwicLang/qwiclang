@@ -109,7 +109,7 @@ func (builder *Builder) buildBlock(block *ast.BlockStatement) {
 	defer func() {
 		// Auto-free HTTP resources in this scope before popping the scope
 		for name, typ := range builder.scopes[len(builder.scopes)-1] {
-			if typ.Kind == types.AnyType {
+			if typ.Kind == types.Any {
 				builder.emit(&Call{
 					Function: "http.free_request",
 					Args:     []string{name},
@@ -226,11 +226,11 @@ func (builder *Builder) buildExpression(expression ast.Expression) valueRef {
 
 		var funcName string
 		switch left.Type.Kind {
-		case types.ListType:
+		case types.List:
 			funcName = "lists.get"
-		case types.DictType:
+		case types.Dictionary:
 			funcName = "dictionaries.get"
-		case types.TupleType:
+		case types.Tuple:
 			// For tuples, we map index 0 to first, 1 to second, etc.
 			if lit, ok := node.Index.(*ast.LiteralExpression); ok && lit.Kind == ast.LiteralInteger {
 				switch lit.Value {
@@ -260,9 +260,9 @@ func (builder *Builder) buildExpression(expression ast.Expression) valueRef {
 		target := builder.newTemp()
 
 		var funcName string
-		if left.Type.Kind == types.ListType {
+		if left.Type.Kind == types.List {
 			funcName = "lists.slice"
-		} else if left.Type.Kind == types.StringType {
+		} else if left.Type.Kind == types.String {
 			funcName = "strings.slice"
 		} else {
 			builder.errorAt(node.Position(), "unsupported slice type %q", left.Type)

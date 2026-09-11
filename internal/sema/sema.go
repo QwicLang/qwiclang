@@ -379,34 +379,14 @@ func (checker *Checker) inferExpression(expression ast.Expression, activeScope *
 		leftType := checker.inferExpression(node.Left, activeScope)
 		indexType := checker.inferExpression(node.Index, activeScope)
 
-		if leftType.Kind == types.ListType || leftType.Kind == types.TupleType {
+		if leftType.Kind == types.List || leftType.Kind == types.Tuple {
 			if indexType.Kind != types.Int {
 				checker.errorAt(node.Index.Position(), "index must be an integer, got %q", indexType)
 				return types.InvalidType
 			}
 			return types.StringType
 		}
-		if leftType.Kind == types.DictType {
-			if indexType.Kind != types.String {
-				checker.errorAt(node.Index.Position(), "dictionary index must be a string, got %q", indexType)
-				return types.InvalidType
-			}
-			return types.StringType
-		}
-		checker.errorAt(node.Position(), "cannot index into type %q", leftType)
-		return types.InvalidType
-	case *ast.IndexExpression:
-		leftType := checker.inferExpression(node.Left, activeScope)
-		indexType := checker.inferExpression(node.Index, activeScope)
-
-		if leftType.Kind == types.ListType || leftType.Kind == types.TupleType {
-			if indexType.Kind != types.Int {
-				checker.errorAt(node.Index.Position(), "index must be an integer, got %q", indexType)
-				return types.InvalidType
-			}
-			return types.StringType
-		}
-		if leftType.Kind == types.DictType {
+		if leftType.Kind == types.Dictionary {
 			if indexType.Kind != types.String {
 				checker.errorAt(node.Index.Position(), "dictionary index must be a string, got %q", indexType)
 				return types.InvalidType
@@ -420,7 +400,7 @@ func (checker *Checker) inferExpression(expression ast.Expression, activeScope *
 		startType := checker.inferExpression(node.Start, activeScope)
 		endType := checker.inferExpression(node.End, activeScope)
 
-		if leftType.Kind != types.ListType && leftType.Kind != types.StringType {
+		if leftType.Kind != types.List && leftType.Kind != types.String {
 			checker.errorAt(node.Position(), "can only slice lists or strings, got %q", leftType)
 			return types.InvalidType
 		}
