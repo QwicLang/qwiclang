@@ -178,6 +178,33 @@ public func main() {
 `, "2\nLang\n1\ntrue\n2\nlanguage\nQwic:language:2\n")
 }
 
+func TestForLoopBuildsAndRuns(t *testing.T) {
+	assertProgramOutput(t, `import lists
+
+public func main() {
+    const items = ["alpha", "beta", "gamma"]
+    for item in items {
+        print(item)
+    }
+}
+`, "alpha\nbeta\ngamma\n")
+}
+
+func TestPrintDataStructures(t *testing.T) {
+	assertProgramOutput(t, `public func main() {
+    const numbers = ["1", "2", "3"]
+    print(numbers)
+
+    const values = {"a": "1", "b": "2"}
+    print(values)
+
+    const pair = ("foo", "bar")
+    print(pair)
+}
+`, "[1, 2, 3]\n{a: 1, b: 2}\n(foo, bar)\n")
+}
+
+
 func assertProgramOutput(t *testing.T, source string, want string) {
 	t.Helper()
 

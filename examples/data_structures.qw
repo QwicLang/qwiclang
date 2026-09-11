@@ -1,26 +1,17 @@
-import lists
-import sets
-import dictionaries
-import tuples
-
 public func main() {
-    const names: list = lists.new()
-    lists.push(names, "Qwic")
-    lists.push(names, "Lang")
+    // Literal declarations without any imports
+    const names = ["Qwic", "Lang"]
+    const values = {"name": "Qwic", "kind": "language"}
+    const pair = ("Qwic", "language")
 
-    const unique: set = sets.new()
-    sets.add(unique, "Qwic")
-    sets.add(unique, "Qwic")
-
-    const values: dictionary = dictionaries.new()
-    dictionaries.set(values, "name", lists.get(names, 0))
-    dictionaries.set(values, "kind", "language")
-
-    const pair: tuple = tuples.new2(dictionaries.get(values, "name"), dictionaries.get(values, "kind"))
-    const kind: string = dictionaries.get(values, "kind")
-
-    print(f"list length={lists.length(names)}")
-    print(f"set length={sets.length(unique)}")
+    print(f"list item 0={names[0]}")
+    print(f"list item 1={names[1]}")
+    const kind = values["kind"]
     print(f"dictionary kind={kind}")
-    print(f"tuple={tuples.first(pair)}:{tuples.second(pair)}")
+    print(f"tuple={pair[0]}:{pair[1]}")
+
+    // Direct printing of data structures
+    print(names)
+    print(values)
+    print(pair)
 }

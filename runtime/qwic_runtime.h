@@ -16,6 +16,10 @@ void qwic_print_bool(bool value);
 void qwic_print_float(double value);
 void qwic_print_int(int64_t value);
 void qwic_print_string(const char *value);
+void qwic_print_list(void *value);
+void qwic_print_set(void *value);
+void qwic_print_dictionary(void *value);
+void qwic_print_tuple(void *value);
 
 int64_t qwic_strings_length(const char *value);
 bool qwic_strings_empty(const char *value);

@@ -166,7 +166,7 @@ func (builder *Builder) buildStatement(statement ast.Statement) {
 
 func (builder *Builder) buildForStatement(node *ast.ForStatement) {
 	iterable := builder.buildExpression(node.Iterable)
-	
+
 	// We desugar 'for var in iterable' into:
 	// let i = 0
 	// while i < lists.length(iterable) {
@@ -175,49 +175,52 @@ func (builder *Builder) buildForStatement(node *ast.ForStatement) {
 	//     i = i + 1
 	// }
 
-	// 1. Use unique names for the index and iterator to avoid collisions.
-	// We use builder.newTemp() but treat them as named variables for the C backend.
+	// 1. Use unique names for the index to avoid collisions.
 	indexVar := fmt.Sprintf("for_idx_%d", builder.tempIndex+1)
 	builder.tempIndex++
-	
-	// Explicitly declare variables to avoid re-definition or undeclared errors
+
+	// Explicitly declare index and loop variable
 	builder.emit(&Variable{Name: indexVar, Type: types.IntType, Mutable: true})
-	builder.emit(&Constant{Target: indexVar, Type: types.IntType, Value: "0"})
-	
 	builder.emit(&Variable{Name: node.Variable, Type: types.StringType, Mutable: true})
 
 	condBlock := builder.newBlockName("for.cond")
 	bodyBlock := builder.newBlockName("for.body")
 	endBlock := builder.newBlockName("for.end")
-	
+
 	// Condition: index < lists.length(iterable)
 	builder.emit(&Jump{Target: condBlock})
 	builder.appendBlock(condBlock)
-	
+
 	lenCall := builder.newTemp()
 	builder.emit(&Call{Target: lenCall, Function: "lists.length", Args: []string{iterable.Name}, Type: types.IntType})
-	
+
 	condTemp := builder.newTemp()
 	builder.emit(&BinaryOperation{Target: condTemp, Operator: token.Less, Left: indexVar, Right: lenCall, Type: types.BoolType})
 	builder.emit(&Branch{Condition: condTemp, ThenBlock: bodyBlock, ElseBlock: endBlock})
-	
+
 	builder.appendBlock(bodyBlock)
-	
+
 	// Get current item: var = lists.get(iterable, index)
 	itemTemp := builder.newTemp()
 	builder.emit(&Call{Target: itemTemp, Function: "lists.get", Args: []string{iterable.Name, indexVar}, Type: types.StringType})
 	builder.emit(&Store{Target: node.Variable, Value: itemTemp})
-	
-	// Build body
-	builder.buildBlock(node.Body)
-	
+
+	// Build body with loop variable declared in scope
+	builder.pushScope()
+	builder.declare(node.Variable, types.StringType)
+	for _, statement := range node.Body.Statements {
+		builder.buildStatement(statement)
+	}
+	builder.popScope()
+
 	// Increment index: i = i + 1
-	builder.emit(&Constant{Target: "const_1", Type: types.IntType, Value: "1"}) 
-	
+	oneTemp := builder.newTemp()
+	builder.emit(&Constant{Target: oneTemp, Type: types.IntType, Value: "1"})
+
 	incTemp := builder.newTemp()
-	builder.emit(&BinaryOperation{Target: incTemp, Operator: token.Plus, Left: indexVar, Right: "const_1", Type: types.IntType})
+	builder.emit(&BinaryOperation{Target: incTemp, Operator: token.Plus, Left: indexVar, Right: oneTemp, Type: types.IntType})
 	builder.emit(&Store{Target: indexVar, Value: incTemp})
-	
+
 	builder.emitJumpIfNeeded(condBlock)
 	builder.appendBlock(endBlock)
 }
@@ -306,6 +309,8 @@ func (builder *Builder) buildExpression(expression ast.Expression) valueRef {
 				builder.errorAt(node.Position(), "dynamic indexing of tuples not yet supported")
 				funcName = "tuples.first"
 			}
+			builder.emit(&Call{Target: target, Function: funcName, Args: []string{left.Name}, Type: types.StringType})
+			return valueRef{Name: target, Type: types.StringType}
 		default:
 			builder.errorAt(node.Position(), "cannot index into type %q", left.Type)
 			funcName = "lists.get"

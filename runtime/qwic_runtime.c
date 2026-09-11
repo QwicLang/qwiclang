@@ -93,6 +93,74 @@ void qwic_print_string(const char *value) {
     printf("%s\n", value);
 }
 
+void qwic_print_list(void *value) {
+    if (value == NULL) {
+        printf("[]\n");
+        return;
+    }
+    qwic_list *list = (qwic_list *)value;
+    putchar('[');
+    for (size_t i = 0; i < list->length; i++) {
+        if (i > 0) {
+            printf(", ");
+        }
+        printf("%s", list->items[i] != NULL ? list->items[i] : "");
+    }
+    putchar(']');
+    putchar('\n');
+}
+
+void qwic_print_set(void *value) {
+    if (value == NULL) {
+        printf("{}\n");
+        return;
+    }
+    qwic_set *set = (qwic_set *)value;
+    putchar('{');
+    for (size_t i = 0; i < set->values.length; i++) {
+        if (i > 0) {
+            printf(", ");
+        }
+        printf("%s", set->values.items[i] != NULL ? set->values.items[i] : "");
+    }
+    putchar('}');
+    putchar('\n');
+}
+
+void qwic_print_dictionary(void *value) {
+    if (value == NULL) {
+        printf("{}\n");
+        return;
+    }
+    qwic_dictionary *dict = (qwic_dictionary *)value;
+    putchar('{');
+    for (size_t i = 0; i < dict->length; i++) {
+        if (i > 0) {
+            printf(", ");
+        }
+        printf("%s: %s", dict->entries[i].key != NULL ? dict->entries[i].key : "", dict->entries[i].value != NULL ? dict->entries[i].value : "");
+    }
+    putchar('}');
+    putchar('\n');
+}
+
+void qwic_print_tuple(void *value) {
+    if (value == NULL) {
+        printf("()\n");
+        return;
+    }
+    qwic_tuple *tuple = (qwic_tuple *)value;
+    putchar('(');
+    for (size_t i = 0; i < tuple->length; i++) {
+        if (i > 0) {
+            printf(", ");
+        }
+        printf("%s", tuple->items[i] != NULL ? tuple->items[i] : "");
+    }
+    putchar(')');
+    putchar('\n');
+}
+
 int64_t qwic_strings_length(const char *value) {
     if (value == NULL) {
         return 0;

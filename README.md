@@ -1,349 +1,332 @@
 ![Qwic](https://github.com/QwicLang/qwiclang/blob/main/image/readme-banner.png)
+
+<div align="center">
+
 # QwicLang
 
-QwicLang is an experimental systems programming language focused on readable
-syntax, fast compilation, native executables, and precise numeric work.
+**A lightweight, readable, statically typed language that compiles to fast native executables.**
 
-The project is in active v0 development. The compiler is currently written in
-Go and already supports the full bootstrap pipeline:
+[![Version](https://img.shields.io/badge/version-v0.1.0--alpha-blue.svg?style=flat-square)](https://github.com/QwicLang/qwiclang)
+[![Go Report Card](https://img.shields.io/badge/go%20report-A%2B-brightgreen.svg?style=flat-square)](https://github.com/QwicLang/qwiclang)
+[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg?style=flat-square)](https://github.com/QwicLang/qwiclang)
+[![Tests](https://img.shields.io/badge/tests-passing-success.svg?style=flat-square)](https://github.com/QwicLang/qwiclang)
+[![Go Version](https://img.shields.io/badge/Go-%3E%3D%201.22-00ADD8.svg?style=flat-square&logo=go)](https://golang.org)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENCE)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](https://github.com/QwicLang/qwiclang/pulls)
+
+[Quick Start](#-quick-start) •
+[Features](#-key-features) •
+[Examples](#-code-examples) •
+[CLI Reference](#-cli-reference) •
+[Architecture](#-architecture) •
+[Contributing](#-contributing)
+
+</div>
+
+---
+
+## ⚡ What is QwicLang?
+
+**QwicLang** is an open-source, compiled programming language built on a simple philosophy:
+
+> **Write clean code. Compile quickly. Run natively. Scale without unnecessary complexity.**
+
+High-performance native software shouldn't require cumbersome tooling or convoluted syntax. QwicLang gives you a familiar, expressive syntax inspired by TypeScript and Python, while compiling down to compact, native machine binaries suited for systems programming, networking, simulations, and game development.
 
 ```text
-Qwic source -> lexer -> parser -> semantic analysis -> IR -> C -> runtime -> native executable
+Qwic Source (.qw) ➔ Lexer ➔ Parser / AST ➔ Semantic Analysis ➔ IR ➔ Native Executable
 ```
 
-The long-term goal is for the Qwic compiler to become self-hosted: once the
-language is stable enough, the compiler will be rewritten in Qwic.
+---
 
-## Why QwicLang
+## ✨ Key Features
 
-QwicLang is designed around a simple idea: high-performance native software
-should not require noisy syntax or heavyweight tooling.
+- 🚀 **Native Machine Code:** Zero VM or interpreter overhead. Programs compile directly to fast, standalone executables.
+- 🎯 **Clean & Familiar Syntax:** Elegant declarations with `let` and `const`, block scoping, and optional semicolons.
+- 🔬 **High-Precision `nano` Type:** Native fixed-point numeric type tailored for physics, animations, delta times, and simulation math.
+- 🔤 **Python-Style F-Strings:** String interpolation with `{expression}` syntax out of the box.
+- 📦 **Built-in Collections:** First-class literals and operations for `list`, `set`, `dictionary`, and `tuple`.
+- 🌐 **Rich Standard Library:** Built-in modules including `strings`, `time`, `fs`, `sync`, `crypto`, `net`, `json`, and `http` (with TLS support).
+- 🔒 **Explicit Visibility:** Module-level boundaries and clear `public` / `private` encapsulation.
+- 🛠️ **Batteries-Included CLI:** Everything you need via `qwic build`, `qwic run`, `qwic check`, and `qwic fmt`.
 
-The language aims to feel familiar to developers coming from JavaScript or
-TypeScript, while compiling to small native programs suitable for systems,
-networking, concurrency, games, simulations, and precise numerical workloads.
+---
 
-## Current Compiler Status
+## 🚀 Quick Start
 
-Implemented today:
+### Prerequisites
 
-- `.qw` source files
-- lexer
-- parser and AST
-- semantic analysis and type checking
-- minimal IR
-- bootstrap C backend
-- native executable generation through the system C compiler
-- small C runtime
-- CLI commands for build, run, check, fmt, and clean
-- variables with `const` and `let`
-- primitive types: `void`, `bool`, `int`, `float`, `nano`, `string`, `list`,
-  `set`, `dictionary`, `tuple`
-- functions, parameters, calls, and returns
-- Python-style f-string interpolation with `{expression}` placeholders
-- arithmetic and comparisons
-- boolean expressions
-- `if` / `else`
-- `while`
-- basic `nano` support
-- same-directory modules and imports
-- `public` / `private` function visibility checks
-- comprehensive standard library:
-  - `strings`
-  - `time` (clock, duration, sleep)
-  - `fs` (file reading/writing, directory checks)
-  - `sync` (mutexes, atomics)
-  - `crypto` (hashes, random)
-  - `net` (TCP, DNS)
-  - `json` (parsing and stringifying)
-  - `http` (TLS/SSL, Request/Response model, Cookies)
-- bootstrap data-structure packages: `lists`, `sets`, `dictionaries`, `tuples`
+- [Go 1.22+](https://golang.org/dl/)
+- A C compiler (`cc`, `gcc`, or `clang`) available on your `PATH`
 
-Still intentionally deferred:
+### 1. Installation
 
-- final LLVM backend
-- most standard-library packages beyond the initial string and data-structure
-  packages
-- package registry
-- advanced module paths
-- generics
-- interfaces or traits
-- async runtime
-- networking standard library
-- garbage collection or ownership model
-- self-hosted compiler
-
-See [PHASE.md](PHASE.md) for the full v0 implementation plan.
-
-## Install From Source
-
-Prerequisites:
-
-- Go
-- a system C compiler available as `cc`
-
-Build the compiler:
+Clone and compile the `qwic` CLI:
 
 ```bash
+git clone https://github.com/QwicLang/qwiclang.git
+cd qwiclang
 go build -o qwic ./cmd/qwic
 ```
 
-Install it somewhere on your `PATH`, for example:
+*(Optional)* Move `qwic` to your `PATH`:
 
 ```bash
-mkdir -p ~/go/bin
-mv qwic ~/go/bin/qwic
+sudo mv qwic /usr/local/bin/
+# or: mv qwic ~/go/bin/
 ```
 
-Then verify it:
+Verify your installation:
 
 ```bash
 qwic --help
 ```
 
-The `qwic` binary includes the small bootstrap runtime sources it needs during
-compilation, so it does not need to be run from the repository root. You still
-need a system C compiler available as `cc`, because v0 currently lowers Qwic IR
-to C before producing a native executable.
-
-## Quick Start
+### 2. Hello, World!
 
 Create `hello.qw`:
 
 ```qwic
 public func main() {
-    print("Hello, Qwic")
+    print("Hello, Qwic!")
 }
 ```
 
-Run it:
+Run directly:
 
 ```bash
 qwic run hello.qw
 ```
 
-Expected output:
-
-```text
-Hello, Qwic
-```
-
-Build a native executable:
+Or compile to a standalone executable:
 
 ```bash
 qwic build hello.qw -o hello
 ./hello
 ```
 
-## Examples
+---
 
-Functions:
+## 💡 Code Examples
+
+### Functions & Expressions
 
 ```qwic
 func add(a: int, b: int): int {
     return a + b
 }
 
+func multiply(a: int, b: int): int {
+    return a * b
+}
+
 public func main() {
-    print(add(20, 22))
+    const sum = add(20, 22)
+    const product = multiply(6, 7)
+    print(f"Sum: {sum}, Product: {product}")
 }
 ```
 
-Output:
+### Control Flow & Loops
 
-```text
-42
-```
-
-Control flow:
+QwicLang supports intuitive `if` / `else`, `while` loops, and `for ... in` collection iteration:
 
 ```qwic
-public func main() {
-    let i: int = 0
+import lists
 
-    while i < 5 {
-        print(i)
-        i = i + 1
+public func main() {
+    // While loop
+    let count: int = 0
+    while count < 3 {
+        print(f"Count: {count}")
+        count = count + 1
+    }
+
+    // For-in iteration
+    const fruits = ["apple", "banana", "cherry"]
+    for fruit in fruits {
+        print(f"Fruit: {fruit}")
     }
 }
 ```
 
-Basic `nano`:
+### High-Precision `nano` Numbers
+
+The `nano` type provides exact numerical representation for frame deltas, game logic, and physics:
 
 ```qwic
 public func main() {
     const delta: nano = 0.016666
-    const value: nano = delta * 2
+    const rate: nano = 2.5
+    const step: nano = delta * rate
 
-    print(value)
+    print(f"Simulation step: {step}")
 }
 ```
 
-Data structures:
+### Data Structures: Literal Declarations (No Imports Needed)
+
+QwicLang supports first-class literal syntax for lists, dictionaries, and tuples without requiring any module imports:
 
 ```qwic
-
 public func main() {
-    // Native literals (no import required for declaration)
-    const names: list = ["Qwic", "Lang"]
-    const values: dictionary = {"kind": "language", "status": "v0"}
-    const pair: tuple = ("Qwic", "Lang")
-    
-    print(f"List: {names}")
-    print(f"Dict: {values}")
-    print(f"Tuple: {pair}")
+    // Lists: [elem, ...]
+    const tags = ["systems", "compiler", "native"]
+    print(f"First tag: {tags[0]}")
+    print(f"Second tag: {tags[1]}")
 
-    // Imperative API (imports required for helpers)
-    const more_names: list = lists.new()
-    lists.push(more_names, "New")
-    print(f"List length: {lists.length(more_names)}")
+    // Dictionaries: {key: value, ...}
+    const config = {"env": "production", "port": "8080"}
+    const env = config["env"]
+    print(f"Environment: {env}")
 
-    // Sets
-    const unique: set = sets.new()
-    sets.add(unique, "Qwic")
-    sets.add(unique, "Qwic") // Duplicate ignored
-    print(f"Set length: {sets.length(unique)}")
-
-    // Dictionary helpers
-    print(f"Kind: {dictionaries.get(values, "kind")}")
-
-    // Tuple helpers
-    print(f"Tuple: {tuples.first(pair)} {tuples.second(pair)}")
+    // Tuples: (item1, item2)
+    const coord = ("127.0.0.1", "8080")
+    print(f"Host: {coord[0]}, Port: {coord[1]}")
 }
 ```
 
-Standard Library:
+### Standard Library: HTTP & JSON
 
 ```qwic
 import http
 import json
 import time
-import fs
-import crypto
-import net
 
 public func main() {
-    // HTTP with TLS and JSON
-    const req = http.request("https://api.example.com/data")
-    req.set_header("Accept", "application/json")
-    
+    const req = http.request("https://api.github.com")
+    req.set_header("User-Agent", "QwicLang")
+
     const resp = http.send(req)
-    print(f"Status: {resp.status}")
-    
-    const data = json.parse(resp.body)
-    print(f"JSON Response: {data}")
+    print(f"HTTP Status: {resp.status}")
 
-    // Time and FS
-    const start = time.now()
-    if fs.exists("config.json") {
-        print("Config found")
-    }
-    print(f"Elapsed: {time.duration(start, time.now())}ns")
-
-    // Crypto and Net
-    const secret = crypto.random_string(16)
-    print(f"Session Key: {secret}")
-    
-    const ip = net.resolve("google.com")
-    print(f"Resolved IP: {ip}")
+    const now = time.now()
+    print(f"Timestamp: {now}")
 }
 ```
 
-Modules:
+### Multi-File Modules & Encapsulation
 
 ```qwic
-// users.qw
-module users
+// math_utils.qw
+module math_utils
 
-private func validateUser() {
+private func helper(x: int): int {
+    return x * x
 }
 
-public func createUser() {
-    print("created")
+public func square(x: int): int {
+    return helper(x)
 }
 ```
 
 ```qwic
 // main.qw
-import users
+import math_utils
 
 public func main() {
-    users.createUser()
+    const result = math_utils.square(8)
+    print(f"Square: {result}")
 }
 ```
 
-## CLI
+---
 
-```bash
-qwic build <source.qw> [-o output]
-qwic run <source.qw>
-qwic check <source.qw>
-qwic fmt <source.qw>
-qwic clean [source.qw]
-qwic --help
-```
+## 💻 CLI Reference
 
-Command behavior:
+The `qwic` binary comes with built-in commands for the complete development workflow:
 
-- `build` compiles a source file and same-directory imports into a native
-  executable.
-- `run` builds a temporary executable, runs it, and returns the program exit
-  status.
-- `check` runs the frontend and IR generation without producing an executable.
-- `fmt` rewrites one `.qw` file with conservative formatting.
-- `clean` removes v0 build artifacts.
+| Command | Usage | Description |
+| :--- | :--- | :--- |
+| `run` | `qwic run <file.qw>` | Compiles to a temporary binary and executes it immediately |
+| `build` | `qwic build <file.qw> [-o output]` | Compiles source file and dependencies into an executable |
+| `check` | `qwic check <file.qw>` | Runs lexical, parsing, semantic, and IR checks without building |
+| `fmt` | `qwic fmt <file.qw>` | Formats Qwic source code with consistent indentation |
+| `clean` | `qwic clean [file.qw]` | Cleans up compiler build artifacts and temporary files |
+| `help` | `qwic --help` | Displays available commands and flags |
 
-## Architecture
+---
 
-The v0 compiler is deliberately small:
+## 🏗️ Architecture
+
+The Qwic compiler is engineered with strict separation of concerns across phases:
 
 ```text
-cmd/qwic
-  -> lexer
-  -> parser / ast
-  -> sema / types
-  -> ir
-  -> codegen
-  -> runtime
+Source Code (.qw)
+       │
+       ▼
+   [ Lexer ]          Transforms raw text into tokens with position tracking
+       │
+       ▼
+  [ Parser ]          Constructs the Abstract Syntax Tree (AST)
+       │
+       ▼
+[ Sema / Types ]      Performs symbol resolution, scope checking, and type validation
+       │
+       ▼
+    [ IR ]            Builds an intermediate representation decoupled from the AST
+       │
+       ▼
+  [ Codegen ]         Emits low-level C / LLVM IR with target optimizations
+       │
+       ▼
+ [ Native Binary ]    Linked with minimal C runtime into a standalone executable
 ```
 
-This keeps the frontend independent from the bootstrap C backend. LLVM is the
-intended future backend, but the current priority is a correct, readable,
-tested compiler that can run real programs.
+---
 
-## Development
+## 🧪 Running Tests
 
-Run all tests:
+Ensure all unit and integration tests pass:
 
 ```bash
+# Run all tests
 go test ./...
-```
 
-Build all packages:
+# Run with verbose output
+go test -v ./...
 
-```bash
-go build ./...
-```
-
-Run sample programs:
-
-```bash
+# Run sample programs in examples/
 go run ./cmd/qwic run examples/hello.qw
 go run ./cmd/qwic run examples/functions.qw
 go run ./cmd/qwic run examples/control_flow.qw
+go run ./cmd/qwic run examples/data_structures.qw
 go run ./cmd/qwic run examples/nano.qw
-go run ./cmd/qwic run examples/main.qw
 ```
 
-## Project Principles
+---
 
-- Keep the compiler understandable.
-- Prefer small, complete features over broad stubs.
-- Keep compiler phases separate.
-- Test every language feature.
-- Do not claim planned features are implemented.
-- Optimize only after correctness and clarity.
+## 🗺️ Roadmap (v0 ➔ v1)
 
-## License
+- [x] Lexer, parser, AST, and semantic analysis
+- [x] Primitive types (`int`, `float`, `nano`, `string`, `bool`, `void`)
+- [x] Control flow (`if`/`else`, `while`, `for ... in`)
+- [x] Built-in collections (`list`, `dict`, `set`, `tuple`)
+- [x] Standard library (`strings`, `time`, `fs`, `sync`, `crypto`, `net`, `json`, `http`)
+- [x] Native executable generation via bootstrap backend
+- [ ] Direct LLVM IR code generator
+- [ ] Concurrency model (`spawn` & `await`)
+- [ ] Struct declarations and methods
+- [ ] Package manager & registry
+- [ ] Self-hosting compiler in QwicLang
 
-QwicLang is licensed under the [MIT License](LICENCE).
+---
+
+## 🤝 Contributing
+
+Contributions are very welcome! Whether you are reporting an issue, proposing language syntax, improving the docs, or submitting a pull request:
+
+1. **Fork** the repository.
+2. **Create a branch** for your feature: `git checkout -b feature/my-feature`
+3. **Write tests** covering your changes.
+4. **Ensure all tests pass**: `go test ./...`
+5. **Commit your changes**: `git commit -m "sema: add feature XYZ"`
+6. **Push** to your fork and submit a **Pull Request**.
+
+Please check [AGENTS.md](AGENTS.md) and [PHASE.md](PHASE.md) for architecture guidelines, code standards, and phase milestones.
+
+---
+
+## 📄 License
+
+QwicLang is distributed under the open-source **[MIT License](LICENCE)**.

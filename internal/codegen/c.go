@@ -257,6 +257,14 @@ func (generator *cGenerator) writePrint(args []string) {
 		fmt.Fprintf(&generator.builder, "  qwic_print_string(%s);\n", cValue(arg))
 	case types.Bool:
 		fmt.Fprintf(&generator.builder, "  qwic_print_bool(%s);\n", cValue(arg))
+	case types.List:
+		fmt.Fprintf(&generator.builder, "  qwic_print_list(%s);\n", cValue(arg))
+	case types.Set:
+		fmt.Fprintf(&generator.builder, "  qwic_print_set(%s);\n", cValue(arg))
+	case types.Dictionary:
+		fmt.Fprintf(&generator.builder, "  qwic_print_dictionary(%s);\n", cValue(arg))
+	case types.Tuple:
+		fmt.Fprintf(&generator.builder, "  qwic_print_tuple(%s);\n", cValue(arg))
 	default:
 		generator.diagnostics = append(generator.diagnostics, diagnostic.Error(token.Position{Line: 1, Column: 1}, fmt.Sprintf("cannot print value of type %q", generator.valueTypes[arg])))
 	}
