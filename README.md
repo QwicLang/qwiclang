@@ -48,7 +48,15 @@ Implemented today:
 - basic `nano` support
 - same-directory modules and imports
 - `public` / `private` function visibility checks
-- standard `strings` package
+- comprehensive standard library:
+  - `strings`
+  - `time` (clock, duration, sleep)
+  - `fs` (file reading/writing, directory checks)
+  - `sync` (mutexes, atomics)
+  - `crypto` (hashes, random)
+  - `net` (TCP, DNS)
+  - `json` (parsing and stringifying)
+  - `http` (TLS/SSL, Request/Response model, Cookies)
 - bootstrap data-structure packages: `lists`, `sets`, `dictionaries`, `tuples`
 
 Still intentionally deferred:
@@ -205,6 +213,43 @@ public func main() {
 
     // Tuple helpers
     print(f"Tuple: {tuples.first(pair)} {tuples.second(pair)}")
+}
+```
+
+Standard Library:
+
+```qwic
+import http
+import json
+import time
+import fs
+import crypto
+import net
+
+public func main() {
+    // HTTP with TLS and JSON
+    const req = http.request("https://api.example.com/data")
+    req.set_header("Accept", "application/json")
+    
+    const resp = http.send(req)
+    print(f"Status: {resp.status}")
+    
+    const data = json.parse(resp.body)
+    print(f"JSON Response: {data}")
+
+    // Time and FS
+    const start = time.now()
+    if fs.exists("config.json") {
+        print("Config found")
+    }
+    print(f"Elapsed: {time.duration(start, time.now())}ns")
+
+    // Crypto and Net
+    const secret = crypto.random_string(16)
+    print(f"Session Key: {secret}")
+    
+    const ip = net.resolve("google.com")
+    print(f"Resolved IP: {ip}")
 }
 ```
 
