@@ -215,41 +215,6 @@ func (builder *Builder) buildExpression(expression ast.Expression) valueRef {
 			funcName = "dictionaries.get"
 		case types.TupleType:
 			// For tuples, we map index 0 to first, 1 to second, etc.
-			// This assumes the index is a constant for now.
-			if lit, ok := node.Index.(*ast.LiteralExpression); ok && lit.Kind == ast.LiteralInteger {
-				switch lit.Value {
-				case "0":
-					funcName = "tuples.first"
-				case "1":
-					funcName = "tuples.second"
-				default:
-					builder.errorAt(node.Position(), "tuple index out of range (only 0 and 1 supported in v0)")
-					funcName = "tuples.first" // fallback
-				}
-			} else {
-				builder.errorAt(node.Position(), "dynamic indexing of tuples not yet supported")
-				funcName = "tuples.first" // fallback
-			}
-		default:
-			builder.errorAt(node.Position(), "cannot index into type %q", left.Type)
-			funcName = "lists.get" // fallback
-		}
-
-		builder.emit(&Call{Target: target, Function: funcName, Args: []string{left.Name, index.Name}, Type: types.StringType})
-		return valueRef{Name: target, Type: types.StringType}
-	case *ast.IndexExpression:
-		left := builder.buildExpression(node.Left)
-		index := builder.buildExpression(node.Index)
-		target := builder.newTemp()
-
-		var funcName string
-		switch left.Type.Kind {
-		case types.ListType:
-			funcName = "lists.get"
-		case types.DictType:
-			funcName = "dictionaries.get"
-		case types.TupleType:
-			// For tuples, we map index 0 to first, 1 to second, etc.
 			if lit, ok := node.Index.(*ast.LiteralExpression); ok && lit.Kind == ast.LiteralInteger {
 				switch lit.Value {
 				case "0":
