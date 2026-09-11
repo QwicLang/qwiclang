@@ -175,9 +175,12 @@ func (builder *Builder) buildForStatement(node *ast.ForStatement) {
 	//     i = i + 1
 	// }
 
-	// 1. Declare the loop index and the loop variable in the current scope
-	// so the C compiler sees them as local variables.
-	indexVar := "for_idx_" + builder.newTemp()
+	// 1. Use unique names for the index and iterator to avoid collisions.
+	// We use builder.newTemp() but treat them as named variables for the C backend.
+	indexVar := fmt.Sprintf("for_idx_%d", builder.tempIndex+1)
+	builder.tempIndex++
+	
+	// Explicitly declare variables to avoid re-definition or undeclared errors
 	builder.emit(&Variable{Name: indexVar, Type: types.IntType, Mutable: true})
 	builder.emit(&Constant{Target: indexVar, Type: types.IntType, Value: "0"})
 	
