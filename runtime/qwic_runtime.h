@@ -59,8 +59,13 @@ int64_t qwic_net_tcp_write(void *conn, const char *data);
 void qwic_net_tcp_close(void *conn);
 const char *qwic_net_dns_lookup(const char *host);
 
-void *qwic_lists_new(void);void qwic_lists_push(void *list, const char *value);
-const char *qwic_lists_get(void *list, int64_t index);
+// JSON
+char *qwic_json_stringify(const char *value);
+const char *qwic_json_parse(const char *json);
+char *qwic_json_encode(const char *value);
+const char *qwic_json_decode(const char *json);
+
+void *qwic_lists_new(void);void qwic_lists_push(void *list, const char *value);const char *qwic_lists_get(void *list, int64_t index);
 int64_t qwic_lists_length(void *list);
 bool qwic_lists_contains(void *list, const char *value);
 
