@@ -182,10 +182,6 @@ public func main() {
 Data structures:
 
 ```qwic
-import lists
-import sets
-import dictionaries
-import tuples
 
 public func main() {
     // Native literals (no import required for declaration)
