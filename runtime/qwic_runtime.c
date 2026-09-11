@@ -191,9 +191,6 @@ int64_t qwic_time_duration(int64_t start, int64_t end) {
 
 // ... (previous functions)
 
-int64_t qwic_time_duration(int64_t start, int64_t end) {
-    return end - start;
-}
 
 const char *qwic_fs_read_file(const char *path) {
     if (path == NULL) return "";
@@ -227,13 +224,6 @@ bool qwic_fs_write_file(const char *path, const char *content) {
     fclose(file);
     return written == strlen(content);
 }
-
-bool qwic_fs_exists(const char *path) {
-    if (path == NULL) return false;
-    return access(path, F_OK) == 0;
-}
-
-// ... (previous functions)
 
 bool qwic_fs_exists(const char *path) {
     if (path == NULL) return false;
