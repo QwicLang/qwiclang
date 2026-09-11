@@ -66,14 +66,17 @@ char *qwic_json_encode(const char *value);
 const char *qwic_json_decode(const char *json);
 
 // HTTP
-void *qwic_http_get(const char *url);
-void *qwic_http_post(const char *url, const char *body);
+void *qwic_http_request_new(const char *url);
+void qwic_http_request_set_method(void *req, const char *method);
+void qwic_http_request_set_body(void *req, const char *body);
+void *qwic_http_send(void *req);
+void qwic_http_request_free(void *req);
+
 int64_t qwic_http_get_status(void *response);
 const char *qwic_http_get_body(void *response);
 void qwic_http_free_response(void *response);
 
-void *qwic_lists_new(void);void qwic_lists_push(void *list, const char *value);const char *qwic_lists_get(void *list, int64_t index);int64_t qwic_lists_length(void *list);
-bool qwic_lists_contains(void *list, const char *value);
+void *qwic_lists_new(void);void qwic_lists_push(void *list, const char *value);const char *qwic_lists_get(void *list, int64_t index);int64_t qwic_lists_length(void *list);bool qwic_lists_contains(void *list, const char *value);
 
 void *qwic_sets_new(void);
 void qwic_sets_add(void *set, const char *value);
