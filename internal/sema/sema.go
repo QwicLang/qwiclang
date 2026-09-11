@@ -434,18 +434,21 @@ func (checker *Checker) inferExpression(expression ast.Expression, activeScope *
 			return types.ListType
 		}
 		firstType := checker.inferExpression(node.Elements[0], activeScope)
+		allSame := true
 		for _, elem := range node.Elements[1:] {
 			elemType := checker.inferExpression(elem, activeScope)
 			if !types.Compatible(firstType, elemType) {
-				checker.errorAt(elem.Position(), "all array elements must have the same type, got %q and %q", firstType, elemType)
-				return types.InvalidType
+				allSame = false
 			}
+		}
+		if !allSame {
+			return types.AnyType // Or a specialized ListAny type if available
 		}
 		return types.ListType
 	case *ast.DictionaryLiteralExpression:
 		for _, pair := range node.Pairs {
 			keyType := checker.inferExpression(pair.Key, activeScope)
-			if keyType.Kind != types.String {
+			if keyType.Kind != types.String && keyType.Kind != types.Any {
 				checker.errorAt(pair.Key.Position(), "dictionary keys must be strings, got %q", keyType)
 			}
 			checker.inferExpression(pair.Value, activeScope)

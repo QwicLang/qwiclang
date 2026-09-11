@@ -29,6 +29,19 @@ bool qwic_strings_starts_with(const char *value, const char *prefix);
 bool qwic_strings_ends_with(const char *value, const char *suffix);
 int64_t qwic_strings_index_of(const char *value, const char *needle);
 
+int64_t qwic_time_now(void);
+void qwic_time_sleep(int64_t ms);
+int64_t qwic_time_duration(int64_t start, int64_t end);
+
+const char *qwic_fs_read_file(const char *path);
+bool qwic_fs_write_file(const char *path, const char *content);
+bool qwic_fs_exists(const char *path);
+
+void *qwic_sync_mutex_new(void);
+void qwic_sync_mutex_lock(void *mutex);
+void qwic_sync_mutex_unlock(void *mutex);
+void qwic_sync_mutex_free(void *mutex);
+
 void *qwic_lists_new(void);
 void qwic_lists_push(void *list, const char *value);
 const char *qwic_lists_get(void *list, int64_t index);

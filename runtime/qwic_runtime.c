@@ -4,6 +4,10 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <string.h>
+#include <time.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <pthread.h>
 
 static int qwic_exit_code = 0;
 
@@ -169,6 +173,96 @@ int64_t qwic_strings_index_of(const char *value, const char *needle) {
         return -1;
     }
     return (int64_t)(match - value);
+}
+
+// ... (previous functions)
+
+int64_t qwic_time_now(void) {
+    return (int64_t)time(NULL);
+}
+
+void qwic_time_sleep(int64_t ms) {
+    usleep(ms * 1000);
+}
+
+int64_t qwic_time_duration(int64_t start, int64_t end) {
+    return end - start;
+}
+
+// ... (previous functions)
+
+int64_t qwic_time_duration(int64_t start, int64_t end) {
+    return end - start;
+}
+
+const char *qwic_fs_read_file(const char *path) {
+    if (path == NULL) return "";
+    
+    FILE *file = fopen(path, "r");
+    if (file == NULL) return "";
+
+    fseek(file, 0, SEEK_END);
+    long length = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    char *buffer = qwic_alloc(length + 1);
+    if (buffer == NULL) {
+        fclose(file);
+        return "";
+    }
+    
+    size_t read_bytes = fread(buffer, 1, length, file);
+    buffer[read_bytes] = '\0';
+    fclose(file);
+    return buffer;
+}
+
+bool qwic_fs_write_file(const char *path, const char *content) {
+    if (path == NULL || content == NULL) return false;
+    
+    FILE *file = fopen(path, "w");
+    if (file == NULL) return false;
+    
+    size_t written = fwrite(content, 1, strlen(content), file);
+    fclose(file);
+    return written == strlen(content);
+}
+
+bool qwic_fs_exists(const char *path) {
+    if (path == NULL) return false;
+    return access(path, F_OK) == 0;
+}
+
+// ... (previous functions)
+
+bool qwic_fs_exists(const char *path) {
+    if (path == NULL) return false;
+    return access(path, F_OK) == 0;
+}
+
+void *qwic_sync_mutex_new(void) {
+    pthread_mutex_t *mutex = qwic_alloc(sizeof(pthread_mutex_t));
+    pthread_mutex_init(mutex, NULL);
+    return mutex;
+}
+
+void qwic_sync_mutex_lock(void *mutex) {
+    if (mutex != NULL) {
+        pthread_mutex_lock((pthread_mutex_t *)mutex);
+    }
+}
+
+void qwic_sync_mutex_unlock(void *mutex) {
+    if (mutex != NULL) {
+        pthread_mutex_unlock((pthread_mutex_t *)mutex);
+    }
+}
+
+void qwic_sync_mutex_free(void *mutex) {
+    if (mutex != NULL) {
+        pthread_mutex_destroy((pthread_mutex_t *)mutex);
+        qwic_free(mutex);
+    }
 }
 
 void *qwic_lists_new(void) {

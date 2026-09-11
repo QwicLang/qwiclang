@@ -111,6 +111,11 @@ func Compatible(target, value Type) bool {
 		return true
 	}
 
+	// Allow null to be compatible with any non-void type
+	if value.Kind == Null {
+		return target.Kind != Void
+	}
+
 	// Qwic v0 stores nano as its own type, but decimal literals currently arrive
 	// from the lexer as Float. This compatibility allows `const x: nano = 0.1`
 	// without pretending full fixed-point literal typing is implemented yet.
