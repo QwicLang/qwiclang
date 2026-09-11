@@ -50,8 +50,16 @@ int64_t qwic_crypto_random_int(void);
 char *qwic_crypto_hex_encode(const char *bytes, int len);
 char *qwic_crypto_base64_encode(const char *bytes, int len);
 
-void *qwic_lists_new(void);
-void qwic_lists_push(void *list, const char *value);
+// Net
+void *qwic_net_tcp_connect(const char *host, int64_t port);
+void *qwic_net_tcp_listen(const char *port_str);
+void *qwic_net_tcp_accept(void *listen_conn);
+const char *qwic_net_tcp_read(void *conn, int64_t max_len);
+int64_t qwic_net_tcp_write(void *conn, const char *data);
+void qwic_net_tcp_close(void *conn);
+const char *qwic_net_dns_lookup(const char *host);
+
+void *qwic_lists_new(void);void qwic_lists_push(void *list, const char *value);
 const char *qwic_lists_get(void *list, int64_t index);
 int64_t qwic_lists_length(void *list);
 bool qwic_lists_contains(void *list, const char *value);
