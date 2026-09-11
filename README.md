@@ -180,10 +180,19 @@ import dictionaries
 import tuples
 
 public func main() {
-    // Lists
-    const names: list = lists.new()
-    lists.push(names, "Qwic")
-    print(f"List length: {lists.length(names)}")
+    // Native literals (no import required for declaration)
+    const names: list = ["Qwic", "Lang"]
+    const values: dictionary = {"kind": "language", "status": "v0"}
+    const pair: tuple = ("Qwic", "Lang")
+    
+    print(f"List: {names}")
+    print(f"Dict: {values}")
+    print(f"Tuple: {pair}")
+
+    // Imperative API (imports required for helpers)
+    const more_names: list = lists.new()
+    lists.push(more_names, "New")
+    print(f"List length: {lists.length(more_names)}")
 
     // Sets
     const unique: set = sets.new()
@@ -191,13 +200,10 @@ public func main() {
     sets.add(unique, "Qwic") // Duplicate ignored
     print(f"Set length: {sets.length(unique)}")
 
-    // Dictionaries
-    const values: dictionary = dictionaries.new()
-    dictionaries.set(values, "kind", "language")
+    // Dictionary helpers
     print(f"Kind: {dictionaries.get(values, "kind")}")
 
-    // Tuples
-    const pair: tuple = tuples.new2("Qwic", "Lang")
+    // Tuple helpers
     print(f"Tuple: {tuples.first(pair)} {tuples.second(pair)}")
 }
 ```
