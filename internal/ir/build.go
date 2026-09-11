@@ -175,12 +175,14 @@ func (builder *Builder) buildForStatement(node *ast.ForStatement) {
 	//     i = i + 1
 	// }
 
-	// Note: This implementation specifically targets lists for v0.
-	// For Sets/Dicts, we would need runtime iterator support.
+	// 1. Declare the loop index and the loop variable in the current scope
+	// so the C compiler sees them as local variables.
+	indexVar := "for_idx_" + builder.newTemp()
+	builder.emit(&Variable{Name: indexVar, Type: types.IntType, Mutable: true})
+	builder.emit(&Constant{Target: indexVar, Type: types.IntType, Value: "0"})
 	
-	indexTemp := builder.newTemp()
-	builder.emit(&Constant{Target: indexTemp, Type: types.IntType, Value: "0"})
-	
+	builder.emit(&Variable{Name: node.Variable, Type: types.StringType, Mutable: true})
+
 	condBlock := builder.newBlockName("for.cond")
 	bodyBlock := builder.newBlockName("for.body")
 	endBlock := builder.newBlockName("for.end")
@@ -193,14 +195,14 @@ func (builder *Builder) buildForStatement(node *ast.ForStatement) {
 	builder.emit(&Call{Target: lenCall, Function: "lists.length", Args: []string{iterable.Name}, Type: types.IntType})
 	
 	condTemp := builder.newTemp()
-	builder.emit(&BinaryOperation{Target: condTemp, Operator: token.Less, Left: indexTemp, Right: lenCall, Type: types.BoolType})
+	builder.emit(&BinaryOperation{Target: condTemp, Operator: token.Less, Left: indexVar, Right: lenCall, Type: types.BoolType})
 	builder.emit(&Branch{Condition: condTemp, ThenBlock: bodyBlock, ElseBlock: endBlock})
 	
 	builder.appendBlock(bodyBlock)
 	
 	// Get current item: var = lists.get(iterable, index)
 	itemTemp := builder.newTemp()
-	builder.emit(&Call{Target: itemTemp, Function: "lists.get", Args: []string{iterable.Name, indexTemp}, Type: types.StringType})
+	builder.emit(&Call{Target: itemTemp, Function: "lists.get", Args: []string{iterable.Name, indexVar}, Type: types.StringType})
 	builder.emit(&Store{Target: node.Variable, Value: itemTemp})
 	
 	// Build body
@@ -210,8 +212,8 @@ func (builder *Builder) buildForStatement(node *ast.ForStatement) {
 	builder.emit(&Constant{Target: "const_1", Type: types.IntType, Value: "1"}) 
 	
 	incTemp := builder.newTemp()
-	builder.emit(&BinaryOperation{Target: incTemp, Operator: token.Plus, Left: indexTemp, Right: "const_1", Type: types.IntType})
-	builder.emit(&Store{Target: indexTemp, Value: incTemp})
+	builder.emit(&BinaryOperation{Target: incTemp, Operator: token.Plus, Left: indexVar, Right: "const_1", Type: types.IntType})
+	builder.emit(&Store{Target: indexVar, Value: incTemp})
 	
 	builder.emitJumpIfNeeded(condBlock)
 	builder.appendBlock(endBlock)
