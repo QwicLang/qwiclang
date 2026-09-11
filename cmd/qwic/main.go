@@ -18,7 +18,7 @@ import (
 	"qwiclang/internal/token"
 )
 
-const Version = "v0.0.0"
+const Version = "v0.1.0-alpha"
 
 func main() {
 	os.Exit(run(os.Args[1:]))
