@@ -27,10 +27,6 @@ jobs:
             os: windows-latest
             artifact: qwic-windows-amd64
             binary: qwic.exe
-          - name: macos-amd64
-            os: macos-13
-            artifact: qwic-macos-amd64
-            binary: qwic
           - name: macos-arm64
             os: macos-latest
             artifact: qwic-macos-arm64
