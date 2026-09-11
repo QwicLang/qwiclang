@@ -81,6 +81,26 @@ public func main() {
 	}
 }
 
+func TestGenerateCTurboFunction(t *testing.T) {
+	module := buildIR(t, `turbo func calculate(value: int): int {
+    return value * 2
+}
+
+public func main() {
+    print(calculate(10))
+}
+`)
+
+	source, diagnostics := GenerateC(module)
+	if len(diagnostics) > 0 {
+		t.Fatalf("expected no diagnostics, got %v", diagnostics)
+	}
+	want := "static inline __attribute__((always_inline, hot, optimize(\"O3\")))"
+	if !strings.Contains(source, want) {
+		t.Fatalf("generated C missing turbo optimization attribute %q:\n%s", want, source)
+	}
+}
+
 func TestBuildExecutableCanKeepGeneratedC(t *testing.T) {
 	module := buildIR(t, `public func main() {
     print("Hello, Qwic")

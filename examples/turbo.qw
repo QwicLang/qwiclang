@@ -1,0 +1,9 @@
+turbo func square(value: int): int {
+    return value * value
+}
+
+public func main() {
+    const x: int = 12
+    const result: int = square(x)
+    print(f"square({x}) = {result}")
+}

@@ -204,6 +204,17 @@ func TestPrintDataStructures(t *testing.T) {
 `, "[1, 2, 3]\n{a: 1, b: 2}\n(foo, bar)\n")
 }
 
+func TestTurboFunctionBuildsAndRuns(t *testing.T) {
+	assertProgramOutput(t, `turbo func calculate(value: int): int {
+    return value * 2
+}
+
+public func main() {
+    print(calculate(21))
+}
+`, "42\n")
+}
+
 
 func assertProgramOutput(t *testing.T, source string, want string) {
 	t.Helper()

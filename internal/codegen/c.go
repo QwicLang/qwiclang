@@ -104,7 +104,11 @@ func (generator *cGenerator) writePreamble() {
 }
 
 func (generator *cGenerator) writePrototype(function ir.Function) {
-	fmt.Fprintf(&generator.builder, "%s %s(", cFunctionReturnType(function), cFunctionName(function.Name))
+	prefix := ""
+	if function.Turbo && function.Name != "main" {
+		prefix = "static inline __attribute__((always_inline, hot, optimize(\"O3\"))) "
+	}
+	fmt.Fprintf(&generator.builder, "%s%s %s(", prefix, cFunctionReturnType(function), cFunctionName(function.Name))
 	generator.writeParameters(function.Parameters)
 	generator.builder.WriteString(");\n")
 }
@@ -112,7 +116,11 @@ func (generator *cGenerator) writePrototype(function ir.Function) {
 func (generator *cGenerator) writeFunction(function ir.Function) {
 	generator.valueTypes = map[string]types.Type{}
 
-	fmt.Fprintf(&generator.builder, "%s %s(", cFunctionReturnType(function), cFunctionName(function.Name))
+	prefix := ""
+	if function.Turbo && function.Name != "main" {
+		prefix = "static inline __attribute__((always_inline, hot, optimize(\"O3\"))) "
+	}
+	fmt.Fprintf(&generator.builder, "%s%s %s(", prefix, cFunctionReturnType(function), cFunctionName(function.Name))
 	generator.writeParameters(function.Parameters)
 	generator.builder.WriteString(") {\n")
 	if function.Name == "main" {

@@ -127,6 +127,20 @@ public func main() {
 }
 ```
 
+### Turbo Optimization Marker (`turbo`)
+
+The `turbo` keyword marks performance-critical functions for aggressive inline and compiler optimization:
+
+```qwic
+turbo func square(value: int): int {
+    return value * value
+}
+
+public func main() {
+    print(square(12))
+}
+```
+
 ### Control Flow & Loops
 
 QwicLang supports intuitive `if` / `else`, `while` loops, and `for ... in` collection iteration:
