@@ -286,6 +286,25 @@ func (checker *Checker) checkStatement(statement ast.Statement, activeScope *sco
 	case *ast.WhileStatement:
 		checker.checkCondition(node.Condition, activeScope)
 		checker.checkBlock(node.Body, activeScope, true)
+	case *ast.ForStatement:
+		iterableType := checker.inferExpression(node.Iterable, activeScope)
+		if iterableType.Kind != types.List && iterableType.Kind != types.Set && iterableType.Kind != types.Dictionary {
+			checker.errorAt(node.Iterable.Position(), "can only loop over collection types (list, set, dict), got %q", iterableType)
+		}
+		
+		// The loop variable is implicit and scoped to the body
+		// We create a child scope specifically for the for-loop body
+		loopScope := &scope{
+			parent:    activeScope,
+			variables: make(map[string]variableSymbol),
+		}
+		loopScope.declare(variableSymbol{
+			name:    node.Variable,
+			typ:     types.StringType, // In v0, we assume items are strings
+			mutable: false,
+			pos:     node.Pos,
+		})
+		checker.checkBlock(node.Body, loopScope, true)
 	default:
 		checker.errorAt(statement.Position(), "unsupported statement %T", statement)
 	}

@@ -157,9 +157,64 @@ func (builder *Builder) buildStatement(statement ast.Statement) {
 		builder.buildIfStatement(node)
 	case *ast.WhileStatement:
 		builder.buildWhileStatement(node)
+	case *ast.ForStatement:
+		builder.buildForStatement(node)
 	default:
 		builder.errorAt(statement.Position(), "unsupported statement %T", statement)
 	}
+}
+
+func (builder *Builder) buildForStatement(node *ast.ForStatement) {
+	iterable := builder.buildExpression(node.Iterable)
+	
+	// We desugar 'for var in iterable' into:
+	// let i = 0
+	// while i < lists.length(iterable) {
+	//     var = lists.get(iterable, i)
+	//     ... body ...
+	//     i = i + 1
+	// }
+
+	// Note: This implementation specifically targets lists for v0.
+	// For Sets/Dicts, we would need runtime iterator support.
+	
+	indexTemp := builder.newTemp()
+	builder.emit(&Constant{Target: indexTemp, Type: types.IntType, Value: "0"})
+	
+	condBlock := builder.newBlockName("for.cond")
+	bodyBlock := builder.newBlockName("for.body")
+	endBlock := builder.newBlockName("for.end")
+	
+	// Condition: index < lists.length(iterable)
+	builder.emit(&Jump{Target: condBlock})
+	builder.appendBlock(condBlock)
+	
+	lenCall := builder.newTemp()
+	builder.emit(&Call{Target: lenCall, Function: "lists.length", Args: []string{iterable.Name}, Type: types.IntType})
+	
+	condTemp := builder.newTemp()
+	builder.emit(&BinaryOperation{Target: condTemp, Operator: token.Less, Left: indexTemp, Right: lenCall, Type: types.BoolType})
+	builder.emit(&Branch{Condition: condTemp, ThenBlock: bodyBlock, ElseBlock: endBlock})
+	
+	builder.appendBlock(bodyBlock)
+	
+	// Get current item: var = lists.get(iterable, index)
+	itemTemp := builder.newTemp()
+	builder.emit(&Call{Target: itemTemp, Function: "lists.get", Args: []string{iterable.Name, indexTemp}, Type: types.StringType})
+	builder.emit(&Store{Target: node.Variable, Value: itemTemp})
+	
+	// Build body
+	builder.buildBlock(node.Body)
+	
+	// Increment index: i = i + 1
+	builder.emit(&Constant{Target: "const_1", Type: types.IntType, Value: "1"}) 
+	
+	incTemp := builder.newTemp()
+	builder.emit(&BinaryOperation{Target: incTemp, Operator: token.Plus, Left: indexTemp, Right: "const_1", Type: types.IntType})
+	builder.emit(&Store{Target: indexTemp, Value: incTemp})
+	
+	builder.emitJumpIfNeeded(condBlock)
+	builder.appendBlock(endBlock)
 }
 
 func (builder *Builder) buildIfStatement(statement *ast.IfStatement) {
