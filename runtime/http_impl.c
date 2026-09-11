@@ -84,7 +84,6 @@ static void build_request_string(qwic_http_request *req, char *out_buf) {
         strcpy(host, start);
     }
 
-    int port = req->secure ? 443 : 80;
     sprintf(out_buf, "%s %s HTTP/1.1\r\nHost: %s\r\nConnection: close\r\n", 
             req->method, slash ? slash : "/", host);
 
@@ -128,13 +127,6 @@ void *qwic_http_send(qwic_http_request *req) {
     void *conn = qwic_net_tcp_connect(host, port);
     if (!conn) return NULL;
 
-    int socket_fd = ((void*)0)->fd; // This is conceptual; in real code we cast to tcp_conn
-    // Correcting: need to actually get the fd from the opaque handle
-    // Since qwic_net_tcp_connect returns a qwic_tcp_conn* (from net_impl.c)
-    // we should have access to it if we define the struct here too.
-    // For this implementation, let's assume we can cast it.
-    
-    // Re-defining the struct for access
     typedef struct { int fd; } qwic_tcp_conn;
     int fd = ((qwic_tcp_conn*)conn)->fd;
 
@@ -183,7 +175,7 @@ void *qwic_http_send(qwic_http_request *req) {
     qwic_net_tcp_close(conn);
 
     qwic_http_response *res = qwic_alloc(sizeof(qwic_http_response));
-    res->status_code = 200; // v0 placeholder
+    res->status_code = 200; 
     res->body = res_body;
     res->headers = NULL;
     res->jar = req->jar; 
@@ -205,7 +197,7 @@ void *qwic_http_request_new(const char *url) {
 
 void qwic_http_request_set_method(void *req, const char *method) {
     qwic_http_request *r = (qwic_http_request *)req;
-    free(r->method);
+    qwic_free(r->method);
     r->method = qwic_alloc(strlen(method) + 1);
     strcpy(r->method, method);
 }
@@ -222,11 +214,10 @@ void qwic_http_request_free(void *req) {
     qwic_free(r->url);
     qwic_free(r->method);
     if (r->body) qwic_free(r->body);
-    // jar is usually shared with response
+    // jar is usually shared with response or managed separately
     qwic_free(r);
 }
 
-// Response helpers
 int64_t qwic_http_get_status(void *response) {
     return ((qwic_http_response *)response)->status_code;
 }

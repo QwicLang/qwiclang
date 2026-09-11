@@ -106,7 +106,24 @@ func (builder *Builder) buildFunction(declaration *ast.FunctionDeclaration, modu
 
 func (builder *Builder) buildBlock(block *ast.BlockStatement) {
 	builder.pushScope()
-	defer builder.popScope()
+	defer func() {
+		// Auto-free HTTP resources in this scope before popping the scope
+		for name, typ := range builder.scopes[len(builder.scopes)-1] {
+			if typ.Kind == types.AnyType {
+				builder.emit(&Call{
+					Function: "http.free_request",
+					Args:     []string{name},
+					Type:     types.VoidType,
+				})
+				builder.emit(&Call{
+					Function: "http.free_response",
+					Args:     []string{name},
+					Type:     types.VoidType,
+				})
+			}
+		}
+		builder.popScope()
+	}()
 
 	for _, statement := range block.Statements {
 		builder.buildStatement(statement)
