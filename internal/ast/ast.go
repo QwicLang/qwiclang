@@ -358,6 +358,20 @@ func (expression *TupleLiteralExpression) Position() token.Position {
 	return expression.Pos
 }
 
+// SliceExpression represents: collection[start:end]
+type SliceExpression struct {
+	Left  Expression
+	Start Expression
+	End   Expression
+	Pos   token.Position
+}
+
+func (*SliceExpression) expressionNode() {}
+
+func (expression *SliceExpression) Position() token.Position {
+	return expression.Pos
+}
+
 // IndexExpression represents: collection[index]
 type IndexExpression struct {
 	Left  Expression

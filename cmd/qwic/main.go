@@ -18,6 +18,8 @@ import (
 	"qwiclang/internal/token"
 )
 
+const Version = "v0.0.0"
+
 func main() {
 	os.Exit(run(os.Args[1:]))
 }
@@ -25,6 +27,10 @@ func main() {
 func run(args []string) int {
 	if len(args) == 0 || args[0] == "--help" || args[0] == "-h" {
 		printHelp()
+		return 0
+	}
+	if args[0] == "--version" || args[0] == "-v" {
+		fmt.Printf("qwic version %s\n", Version)
 		return 0
 	}
 
@@ -294,5 +300,6 @@ Usage:
   qwic check <source.qw>
   qwic fmt <source.qw>
   qwic clean [source.qw]
+  qwic --version
   qwic --help`)
 }

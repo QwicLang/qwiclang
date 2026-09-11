@@ -171,6 +171,37 @@ public func main() {
 }
 ```
 
+Data structures:
+
+```qwic
+import lists
+import sets
+import dictionaries
+import tuples
+
+public func main() {
+    // Lists
+    const names: list = lists.new()
+    lists.push(names, "Qwic")
+    print(f"List length: {lists.length(names)}")
+
+    // Sets
+    const unique: set = sets.new()
+    sets.add(unique, "Qwic")
+    sets.add(unique, "Qwic") // Duplicate ignored
+    print(f"Set length: {sets.length(unique)}")
+
+    // Dictionaries
+    const values: dictionary = dictionaries.new()
+    dictionaries.set(values, "kind", "language")
+    print(f"Kind: {dictionaries.get(values, "kind")}")
+
+    // Tuples
+    const pair: tuple = tuples.new2("Qwic", "Lang")
+    print(f"Tuple: {tuples.first(pair)} {tuples.second(pair)}")
+}
+```
+
 Modules:
 
 ```qwic

@@ -396,15 +396,36 @@ func (parser *Parser) parseCallExpression() ast.Expression {
 	expression := parser.parsePrimaryExpression()
 
 	for {
-		// Index access: collection[index]
+		// Index or Slice access: collection[index] or collection[start:end]
 		if parser.match(token.LBracket) {
 			start := parser.previous().Start
-			index := parser.parseExpression()
-			parser.consume(token.RBracket, "expected ']' after index")
-			expression = &ast.IndexExpression{
-				Left:  expression,
-				Index: index,
-				Pos:   start,
+			
+			// Check if it's a slice [start:end]
+			// We need to peek ahead or parse the first expression and check for ':'
+			// Since parseExpression consumes tokens, we'll use a simplified approach for v0
+			
+			// To properly support [start:end], we check if the first expr is followed by ':'
+			// This requires the parser to be able to handle the ':' token
+			
+			// For this implementation, we'll parse the first expression
+			first := parser.parseExpression()
+			
+			if parser.match(token.Colon) {
+				end := parser.parseExpression()
+				parser.consume(token.RBracket, "expected ']' after slice end")
+				expression = &ast.SliceExpression{
+					Left:  expression,
+					Start: first,
+					End:   end,
+					Pos:   start,
+				}
+			} else {
+				parser.consume(token.RBracket, "expected ']' after index")
+				expression = &ast.IndexExpression{
+					Left:  expression,
+					Index: first,
+					Pos:   start,
+				}
 			}
 			continue
 		}

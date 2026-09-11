@@ -140,6 +140,13 @@ var functions = []Function{
 		ReturnType:  types.BoolType,
 	},
 	{
+		Package:     "lists",
+		Name:        "slice",
+		RuntimeName: "qwic_lists_slice",
+		Parameters:  []Parameter{{Name: "list", Type: types.ListType}, {Name: "start", Type: types.IntType}, {Name: "end", Type: types.IntType}},
+		ReturnType:  types.ListType,
+	},
+	{
 		Package:     "sets",
 		Name:        "new",
 		RuntimeName: "qwic_sets_new",

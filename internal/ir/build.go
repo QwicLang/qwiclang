@@ -202,6 +202,121 @@ func (builder *Builder) buildExpression(expression ast.Expression) valueRef {
 		literalType := builder.literalType(node)
 		builder.emit(&Constant{Target: target, Type: literalType, Value: node.Value})
 		return valueRef{Name: target, Type: literalType}
+	case *ast.IndexExpression:
+		left := builder.buildExpression(node.Left)
+		index := builder.buildExpression(node.Index)
+		target := builder.newTemp()
+
+		var funcName string
+		switch left.Type.Kind {
+		case types.ListType:
+			funcName = "lists.get"
+		case types.DictType:
+			funcName = "dictionaries.get"
+		case types.TupleType:
+			// For tuples, we map index 0 to first, 1 to second, etc.
+			// This assumes the index is a constant for now.
+			if lit, ok := node.Index.(*ast.LiteralExpression); ok && lit.Kind == ast.LiteralInteger {
+				switch lit.Value {
+				case "0":
+					funcName = "tuples.first"
+				case "1":
+					funcName = "tuples.second"
+				default:
+					builder.errorAt(node.Position(), "tuple index out of range (only 0 and 1 supported in v0)")
+					funcName = "tuples.first" // fallback
+				}
+			} else {
+				builder.errorAt(node.Position(), "dynamic indexing of tuples not yet supported")
+				funcName = "tuples.first" // fallback
+			}
+		default:
+			builder.errorAt(node.Position(), "cannot index into type %q", left.Type)
+			funcName = "lists.get" // fallback
+		}
+
+		builder.emit(&Call{Target: target, Function: funcName, Args: []string{left.Name, index.Name}, Type: types.StringType})
+		return valueRef{Name: target, Type: types.StringType}
+	case *ast.IndexExpression:
+		left := builder.buildExpression(node.Left)
+		index := builder.buildExpression(node.Index)
+		target := builder.newTemp()
+
+		var funcName string
+		switch left.Type.Kind {
+		case types.ListType:
+			funcName = "lists.get"
+		case types.DictType:
+			funcName = "dictionaries.get"
+		case types.TupleType:
+			// For tuples, we map index 0 to first, 1 to second, etc.
+			if lit, ok := node.Index.(*ast.LiteralExpression); ok && lit.Kind == ast.LiteralInteger {
+				switch lit.Value {
+				case "0":
+					funcName = "tuples.first"
+				case "1":
+					funcName = "tuples.second"
+				default:
+					builder.errorAt(node.Position(), "tuple index out of range (only 0 and 1 supported in v0)")
+					funcName = "tuples.first"
+				}
+			} else {
+				builder.errorAt(node.Position(), "dynamic indexing of tuples not yet supported")
+				funcName = "tuples.first"
+			}
+		default:
+			builder.errorAt(node.Position(), "cannot index into type %q", left.Type)
+			funcName = "lists.get"
+		}
+
+		builder.emit(&Call{Target: target, Function: funcName, Args: []string{left.Name, index.Name}, Type: types.StringType})
+		return valueRef{Name: target, Type: types.StringType}
+	case *ast.SliceExpression:
+		left := builder.buildExpression(node.Left)
+		start := builder.buildExpression(node.Start)
+		end := builder.buildExpression(node.End)
+		target := builder.newTemp()
+
+		var funcName string
+		if left.Type.Kind == types.ListType {
+			funcName = "lists.slice"
+		} else if left.Type.Kind == types.StringType {
+			funcName = "strings.slice"
+		} else {
+			builder.errorAt(node.Position(), "unsupported slice type %q", left.Type)
+			funcName = "lists.slice"
+		}
+
+		builder.emit(&Call{Target: target, Function: funcName, Args: []string{left.Name, start.Name, end.Name}, Type: left.Type})
+		return valueRef{Name: target, Type: left.Type}
+	case *ast.ArrayLiteralExpression:
+		target := builder.newTemp()
+		builder.emit(&Call{Target: target, Function: "lists.new", Args: []string{}, Type: types.ListType})
+		for _, elem := range node.Elements {
+			val := builder.buildExpression(elem)
+			builder.emit(&Call{Target: "", Function: "lists.push", Args: []string{target, val.Name}, Type: types.VoidType})
+		}
+		return valueRef{Name: target, Type: types.ListType}
+	case *ast.DictionaryLiteralExpression:
+		target := builder.newTemp()
+		builder.emit(&Call{Target: target, Function: "dictionaries.new", Args: []string{}, Type: types.DictType})
+		for _, pair := range node.Pairs {
+			key := builder.buildExpression(pair.Key)
+			val := builder.buildExpression(pair.Value)
+			builder.emit(&Call{Target: "", Function: "dictionaries.set", Args: []string{target, key.Name, val.Name}, Type: types.VoidType})
+		}
+		return valueRef{Name: target, Type: types.DictType}
+	case *ast.TupleLiteralExpression:
+		// Simple desugaring to tuples.newN based on number of elements
+		count := len(node.Elements)
+		args := make([]string, 0, count)
+		for _, elem := range node.Elements {
+			args = append(args, builder.buildExpression(elem).Name)
+		}
+		target := builder.newTemp()
+		funcName := fmt.Sprintf("tuples.new%d", count)
+		builder.emit(&Call{Target: target, Function: funcName, Args: args, Type: types.TupleType})
+		return valueRef{Name: target, Type: types.TupleType}
 	case *ast.InterpolatedStringExpression:
 		target := builder.newTemp()
 		parts := make([]FormatPart, 0, len(node.Parts))

@@ -375,6 +375,87 @@ func (checker *Checker) inferExpression(expression ast.Expression, activeScope *
 		return variable.typ
 	case *ast.LiteralExpression:
 		return literalType(node)
+	case *ast.IndexExpression:
+		leftType := checker.inferExpression(node.Left, activeScope)
+		indexType := checker.inferExpression(node.Index, activeScope)
+
+		if leftType.Kind == types.ListType || leftType.Kind == types.TupleType {
+			if indexType.Kind != types.Int {
+				checker.errorAt(node.Index.Position(), "index must be an integer, got %q", indexType)
+				return types.InvalidType
+			}
+			return types.StringType
+		}
+		if leftType.Kind == types.DictType {
+			if indexType.Kind != types.String {
+				checker.errorAt(node.Index.Position(), "dictionary index must be a string, got %q", indexType)
+				return types.InvalidType
+			}
+			return types.StringType
+		}
+		checker.errorAt(node.Position(), "cannot index into type %q", leftType)
+		return types.InvalidType
+	case *ast.IndexExpression:
+		leftType := checker.inferExpression(node.Left, activeScope)
+		indexType := checker.inferExpression(node.Index, activeScope)
+
+		if leftType.Kind == types.ListType || leftType.Kind == types.TupleType {
+			if indexType.Kind != types.Int {
+				checker.errorAt(node.Index.Position(), "index must be an integer, got %q", indexType)
+				return types.InvalidType
+			}
+			return types.StringType
+		}
+		if leftType.Kind == types.DictType {
+			if indexType.Kind != types.String {
+				checker.errorAt(node.Index.Position(), "dictionary index must be a string, got %q", indexType)
+				return types.InvalidType
+			}
+			return types.StringType
+		}
+		checker.errorAt(node.Position(), "cannot index into type %q", leftType)
+		return types.InvalidType
+	case *ast.SliceExpression:
+		leftType := checker.inferExpression(node.Left, activeScope)
+		startType := checker.inferExpression(node.Start, activeScope)
+		endType := checker.inferExpression(node.End, activeScope)
+
+		if leftType.Kind != types.ListType && leftType.Kind != types.StringType {
+			checker.errorAt(node.Position(), "can only slice lists or strings, got %q", leftType)
+			return types.InvalidType
+		}
+		if startType.Kind != types.Int || endType.Kind != types.Int {
+			checker.errorAt(node.Position(), "slice boundaries must be integers")
+			return types.InvalidType
+		}
+		return leftType
+	case *ast.ArrayLiteralExpression:
+		if len(node.Elements) == 0 {
+			return types.ListType
+		}
+		firstType := checker.inferExpression(node.Elements[0], activeScope)
+		for _, elem := range node.Elements[1:] {
+			elemType := checker.inferExpression(elem, activeScope)
+			if !types.Compatible(firstType, elemType) {
+				checker.errorAt(elem.Position(), "all array elements must have the same type, got %q and %q", firstType, elemType)
+				return types.InvalidType
+			}
+		}
+		return types.ListType
+	case *ast.DictionaryLiteralExpression:
+		for _, pair := range node.Pairs {
+			keyType := checker.inferExpression(pair.Key, activeScope)
+			if keyType.Kind != types.String {
+				checker.errorAt(pair.Key.Position(), "dictionary keys must be strings, got %q", keyType)
+			}
+			checker.inferExpression(pair.Value, activeScope)
+		}
+		return types.DictType
+	case *ast.TupleLiteralExpression:
+		for _, elem := range node.Elements {
+			checker.inferExpression(elem, activeScope)
+		}
+		return types.TupleType
 	case *ast.InterpolatedStringExpression:
 		for _, part := range node.Parts {
 			if part.Expression == nil {
