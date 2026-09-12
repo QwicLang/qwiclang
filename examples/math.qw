@@ -1,0 +1,19 @@
+import math
+
+public func main() {
+    const val: float = -25.5
+    print(f"abs({val}) = {math.abs(val)}")
+
+    const x: float = 9.0
+    print(f"sqrt({x}) = {math.sqrt(x)}")
+
+    const base: float = 2.0
+    const exp: float = 8.0
+    print(f"pow({base}, {exp}) = {math.pow(base, exp)}")
+
+    print(f"min(14.0, 7.0) = {math.min(14.0, 7.0)}")
+    print(f"max(14.0, 7.0) = {math.max(14.0, 7.0)}")
+    print(f"floor(4.9) = {math.floor(4.9)}")
+    print(f"ceil(4.1) = {math.ceil(4.1)}")
+    print(f"round(4.5) = {math.round(4.5)}")
+}

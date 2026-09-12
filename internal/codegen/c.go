@@ -60,7 +60,7 @@ func BuildExecutable(module ir.Module, options Options) []Diagnostic {
 		runtimePath = "runtime"
 	}
 	runtimeCPath := filepath.Join(runtimePath, "qwic_runtime.c")
-	command := exec.Command("cc", cPath, runtimeCPath, "-I", runtimePath, "-o", options.OutputPath)
+	command := exec.Command("cc", cPath, runtimeCPath, "-I", runtimePath, "-lm", "-o", options.OutputPath)
 	output, err := command.CombinedOutput()
 	if err != nil {
 		message := strings.TrimSpace(string(output))

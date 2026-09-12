@@ -33,6 +33,16 @@ bool qwic_strings_starts_with(const char *value, const char *prefix);
 bool qwic_strings_ends_with(const char *value, const char *suffix);
 int64_t qwic_strings_index_of(const char *value, const char *needle);
 
+// Math
+double qwic_math_abs(double x);
+double qwic_math_min(double a, double b);
+double qwic_math_max(double a, double b);
+double qwic_math_sqrt(double x);
+double qwic_math_pow(double base, double exp);
+double qwic_math_floor(double x);
+double qwic_math_ceil(double x);
+double qwic_math_round(double x);
+
 int64_t qwic_time_now(void);
 void qwic_time_sleep(int64_t ms);
 int64_t qwic_time_duration(int64_t start, int64_t end);

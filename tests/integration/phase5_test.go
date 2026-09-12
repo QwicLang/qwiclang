@@ -215,6 +215,22 @@ public func main() {
 `, "42\n")
 }
 
+func TestMathStandardLibrary(t *testing.T) {
+	assertProgramOutput(t, `import math
+
+public func main() {
+    print(math.abs(-42.0))
+    print(math.min(10.0, 20.0))
+    print(math.max(10.0, 20.0))
+    print(math.sqrt(16.0))
+    print(math.pow(2.0, 3.0))
+    print(math.floor(3.7))
+    print(math.ceil(3.2))
+    print(math.round(3.5))
+}
+`, "42.000000\n10.000000\n20.000000\n4.000000\n8.000000\n3.000000\n4.000000\n4.000000\n")
+}
+
 
 func assertProgramOutput(t *testing.T, source string, want string) {
 	t.Helper()

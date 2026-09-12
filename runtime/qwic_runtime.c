@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <pthread.h>
+#include <math.h>
 
 static int qwic_exit_code = 0;
 
@@ -244,6 +245,38 @@ int64_t qwic_strings_index_of(const char *value, const char *needle) {
 }
 
 // ... (previous functions)
+
+double qwic_math_abs(double x) {
+    return fabs(x);
+}
+
+double qwic_math_min(double a, double b) {
+    return fmin(a, b);
+}
+
+double qwic_math_max(double a, double b) {
+    return fmax(a, b);
+}
+
+double qwic_math_sqrt(double x) {
+    return sqrt(x);
+}
+
+double qwic_math_pow(double base, double exp) {
+    return pow(base, exp);
+}
+
+double qwic_math_floor(double x) {
+    return floor(x);
+}
+
+double qwic_math_ceil(double x) {
+    return ceil(x);
+}
+
+double qwic_math_round(double x) {
+    return round(x);
+}
 
 int64_t qwic_time_now(void) {
     return (int64_t)time(NULL);
