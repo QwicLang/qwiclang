@@ -5,9 +5,6 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/tliron/glsp"
-	protocol "github.com/tliron/glsp/protocol_3_16"
-
 	"qwiclang/internal/ast"
 	"qwiclang/internal/parser"
 	"qwiclang/internal/sema"
@@ -25,75 +22,79 @@ var primitiveTypes = []string{
 	"int", "float", "nano", "string", "bool", "void", "list", "set", "dictionary", "tuple",
 }
 
-func (s *Server) textDocumentCompletion(context *glsp.Context, params *protocol.CompletionParams) (any, error) {
-	val, ok := s.documents.Load(params.TextDocument.URI)
+const (
+	CompletionItemKindFunction = 3
+	CompletionItemKindVariable = 6
+	CompletionItemKindModule   = 9
+	CompletionItemKindKeyword  = 14
+	CompletionItemKindType     = 25
+)
+
+func (s *Server) complete(uri string, pos Position) []CompletionItem {
+	val, ok := s.documents.Load(uri)
 	if !ok {
-		return nil, nil
+		return []CompletionItem{}
 	}
 	content := val.(string)
 
-	prefix, isDotTrigger, packageName := getWordBeforePosition(content, params.Position.Line, params.Position.Character)
+	prefix, isDotTrigger, packageName := getWordBeforePosition(content, pos.Line, pos.Character)
 
-	var items []protocol.CompletionItem
+	var items []CompletionItem
 
 	// 1. If triggered by '.', offer stdlib package functions (e.g. math. or strings.)
 	if isDotTrigger && packageName != "" {
 		for _, fn := range stdlib.Functions() {
 			if fn.Package == packageName {
 				doc := formatFunctionSignature(fn.Package, fn.Name, fn.Parameters, fn.ReturnType.String())
-				kind := protocol.CompletionItemKindFunction
-				items = append(items, protocol.CompletionItem{
+				items = append(items, CompletionItem{
 					Label:         fn.Name,
-					Kind:          &kind,
+					Kind:          CompletionItemKindFunction,
 					Detail:        &doc,
 					Documentation: doc,
 				})
 			}
 		}
-		return items, nil
+		return items
 	}
 
 	// 2. Keywords
-	kwKind := protocol.CompletionItemKindKeyword
 	for _, kw := range keywords {
 		if prefix == "" || strings.HasPrefix(kw, prefix) {
-			items = append(items, protocol.CompletionItem{
+			items = append(items, CompletionItem{
 				Label: kw,
-				Kind:  &kwKind,
+				Kind:  CompletionItemKindKeyword,
 			})
 		}
 	}
 
 	// 3. Primitive types
-	typeKind := protocol.CompletionItemKindTypeParameter
 	for _, typ := range primitiveTypes {
 		if prefix == "" || strings.HasPrefix(typ, prefix) {
-			items = append(items, protocol.CompletionItem{
+			items = append(items, CompletionItem{
 				Label: typ,
-				Kind:  &typeKind,
+				Kind:  CompletionItemKindType,
 			})
 		}
 	}
 
 	// 4. Builtins (e.g., print)
-	fnKind := protocol.CompletionItemKindFunction
 	printDetail := "print(value: any): void"
-	items = append(items, protocol.CompletionItem{
+	items = append(items, CompletionItem{
 		Label:  "print",
-		Kind:   &fnKind,
+		Kind:   CompletionItemKindFunction,
 		Detail: &printDetail,
 	})
 
-	// 5. User-declared functions & variables in the current file
-	program, _ := parser.Parse(params.TextDocument.URI, content)
+	// 5. User-declared functions in current file
+	program, _ := parser.Parse(uri, content)
 	if program != nil {
 		for _, decl := range program.Declarations {
 			if fn, ok := decl.(*ast.FunctionDeclaration); ok {
 				if prefix == "" || strings.HasPrefix(fn.Name, prefix) {
 					detail := fmt.Sprintf("func %s(...): %s", fn.Name, fn.ReturnType)
-					items = append(items, protocol.CompletionItem{
+					items = append(items, CompletionItem{
 						Label:  fn.Name,
-						Kind:   &fnKind,
+						Kind:   CompletionItemKindFunction,
 						Detail: &detail,
 					})
 				}
@@ -102,35 +103,34 @@ func (s *Server) textDocumentCompletion(context *glsp.Context, params *protocol.
 	}
 
 	// 6. Stdlib packages (e.g., math, strings, time, http, json)
-	modKind := protocol.CompletionItemKindModule
 	seenPackages := map[string]bool{}
 	for _, fn := range stdlib.Functions() {
 		if !seenPackages[fn.Package] {
 			seenPackages[fn.Package] = true
 			if prefix == "" || strings.HasPrefix(fn.Package, prefix) {
 				detail := fmt.Sprintf("package %s", fn.Package)
-				items = append(items, protocol.CompletionItem{
+				items = append(items, CompletionItem{
 					Label:  fn.Package,
-					Kind:   &modKind,
+					Kind:   CompletionItemKindModule,
 					Detail: &detail,
 				})
 			}
 		}
 	}
 
-	return items, nil
+	return items
 }
 
-func (s *Server) textDocumentHover(context *glsp.Context, params *protocol.HoverParams) (*protocol.Hover, error) {
-	val, ok := s.documents.Load(params.TextDocument.URI)
+func (s *Server) hover(uri string, pos Position) *Hover {
+	val, ok := s.documents.Load(uri)
 	if !ok {
-		return nil, nil
+		return nil
 	}
 	content := val.(string)
 
-	word, fullQualified := getIdentifierAtPosition(content, params.Position.Line, params.Position.Character)
+	word, fullQualified := getIdentifierAtPosition(content, pos.Line, pos.Character)
 	if word == "" && fullQualified == "" {
-		return nil, nil
+		return nil
 	}
 
 	// Check if cursor is on a stdlib function (e.g. math.abs or abs when qualified)
@@ -142,50 +142,50 @@ func (s *Server) textDocumentHover(context *glsp.Context, params *protocol.Hover
 	if fn, ok := stdlib.LookupFunction(target); ok {
 		sig := formatFunctionSignature(fn.Package, fn.Name, fn.Parameters, fn.ReturnType.String())
 		markdown := fmt.Sprintf("```qwic\n%s\n```\n*Qwic standard library*", sig)
-		return &protocol.Hover{
-			Contents: protocol.MarkupContent{
-				Kind:  protocol.MarkupKindMarkdown,
+		return &Hover{
+			Contents: MarkupContent{
+				Kind:  "markdown",
 				Value: markdown,
 			},
-		}, nil
+		}
 	}
 
 	// Check keywords
 	for _, kw := range keywords {
 		if kw == word {
-			return &protocol.Hover{
-				Contents: protocol.MarkupContent{
-					Kind:  protocol.MarkupKindMarkdown,
+			return &Hover{
+				Contents: MarkupContent{
+					Kind:  "markdown",
 					Value: fmt.Sprintf("**keyword** `%s`", kw),
 				},
-			}, nil
+			}
 		}
 	}
 
 	// Check primitive types
 	for _, typ := range primitiveTypes {
 		if typ == word {
-			return &protocol.Hover{
-				Contents: protocol.MarkupContent{
-					Kind:  protocol.MarkupKindMarkdown,
+			return &Hover{
+				Contents: MarkupContent{
+					Kind:  "markdown",
 					Value: fmt.Sprintf("**type** `%s`", typ),
 				},
-			}, nil
+			}
 		}
 	}
 
 	// Check builtins
 	if word == "print" {
-		return &protocol.Hover{
-			Contents: protocol.MarkupContent{
-				Kind:  protocol.MarkupKindMarkdown,
+		return &Hover{
+			Contents: MarkupContent{
+				Kind:  "markdown",
 				Value: "```qwic\nprint(value: any): void\n```\nPrints a value to standard output with a trailing newline.",
 			},
-		}, nil
+		}
 	}
 
 	// Check AST declarations in current file
-	checkResult, _ := sema.Check(params.TextDocument.URI, content)
+	checkResult, _ := sema.Check(uri, content)
 	if checkResult != nil {
 		if fnSymbol, ok := checkResult.Functions[word]; ok {
 			paramsStr := make([]string, 0, len(fnSymbol.Parameters))
@@ -201,54 +201,56 @@ func (s *Server) textDocumentHover(context *glsp.Context, params *protocol.Hover
 				visPrefix = "public "
 			}
 			sig := fmt.Sprintf("%s%sfunc %s(%s): %s", visPrefix, turboPrefix, fnSymbol.Name, strings.Join(paramsStr, ", "), fnSymbol.ReturnType)
-			return &protocol.Hover{
-				Contents: protocol.MarkupContent{
-					Kind:  protocol.MarkupKindMarkdown,
+			return &Hover{
+				Contents: MarkupContent{
+					Kind:  "markdown",
 					Value: fmt.Sprintf("```qwic\n%s\n```", sig),
 				},
-			}, nil
+			}
 		}
 	}
 
-	return nil, nil
+	return nil
 }
 
-func (s *Server) textDocumentDefinition(context *glsp.Context, params *protocol.DefinitionParams) (any, error) {
-	val, ok := s.documents.Load(params.TextDocument.URI)
+func (s *Server) definition(uri string, pos Position) *Location {
+	val, ok := s.documents.Load(uri)
 	if !ok {
-		return nil, nil
+		return nil
 	}
 	content := val.(string)
 
-	word, _ := getIdentifierAtPosition(content, params.Position.Line, params.Position.Character)
+	word, _ := getIdentifierAtPosition(content, pos.Line, pos.Character)
 	if word == "" {
-		return nil, nil
+		return nil
 	}
 
-	program, _ := parser.Parse(params.TextDocument.URI, content)
+	program, _ := parser.Parse(uri, content)
 	if program == nil {
-		return nil, nil
+		return nil
 	}
 
 	// 1. Check if word matches a top-level function declaration
 	for _, decl := range program.Declarations {
 		if fn, ok := decl.(*ast.FunctionDeclaration); ok {
 			if fn.Name == word {
-				return makeLocation(params.TextDocument.URI, fn.Position()), nil
+				loc := makeLocation(uri, fn.Position())
+				return &loc
 			}
 			// Check function parameters
 			for _, param := range fn.Parameters {
 				if param.Name == word {
-					return makeLocation(params.TextDocument.URI, param.Pos), nil
+					loc := makeLocation(uri, param.Pos)
+					return &loc
 				}
 			}
 		}
 	}
 
-	return nil, nil
+	return nil
 }
 
-func makeLocation(uri protocol.DocumentUri, pos token.Position) protocol.Location {
+func makeLocation(uri string, pos token.Position) Location {
 	line := uint32(0)
 	if pos.Line > 0 {
 		line = uint32(pos.Line - 1)
@@ -258,11 +260,11 @@ func makeLocation(uri protocol.DocumentUri, pos token.Position) protocol.Locatio
 		col = uint32(pos.Column - 1)
 	}
 
-	return protocol.Location{
+	return Location{
 		URI: uri,
-		Range: protocol.Range{
-			Start: protocol.Position{Line: line, Character: col},
-			End:   protocol.Position{Line: line, Character: col},
+		Range: Range{
+			Start: Position{Line: line, Character: col},
+			End:   Position{Line: line, Character: col},
 		},
 	}
 }
@@ -290,7 +292,6 @@ func getWordBeforePosition(content string, line uint32, char uint32) (prefix str
 
 	before := currentLine[:char]
 	if strings.HasSuffix(before, ".") {
-		// package.
 		trim := strings.TrimSuffix(before, ".")
 		pkg := getLastWord(trim)
 		return "", true, pkg
@@ -331,7 +332,6 @@ func getIdentifierAtPosition(content string, line uint32, char uint32) (word str
 		}
 	}
 
-	// Find start and end of current word
 	start := col
 	for start > 0 && isIdentChar(rune(l[start-1])) {
 		start--
@@ -342,7 +342,6 @@ func getIdentifierAtPosition(content string, line uint32, char uint32) (word str
 	}
 	word = l[start:end]
 
-	// Check if part of package.function (e.g. math.abs)
 	qStart := start
 	if qStart >= 2 && l[qStart-1] == '.' {
 		pkgStart := qStart - 2

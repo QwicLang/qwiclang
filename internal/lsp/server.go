@@ -1,127 +1,161 @@
 package lsp
 
 import (
+	"encoding/json"
 	"strings"
-	"sync"
-
-	"github.com/tliron/glsp"
-	protocol "github.com/tliron/glsp/protocol_3_16"
-	"github.com/tliron/glsp/server"
 
 	qwicformat "qwiclang/internal/format"
 	"qwiclang/internal/sema"
 )
 
-const ServerName = "qwic-lsp"
+func (s *Server) handleMessage(req *Request) {
+	switch req.Method {
+	case "initialize":
+		result := map[string]any{
+			"capabilities": map[string]any{
+				"textDocumentSync": 1, // Full
+				"completionProvider": map[string]any{
+					"triggerCharacters": []string{"."},
+				},
+				"hoverProvider":              true,
+				"definitionProvider":         true,
+				"documentFormattingProvider": true,
+			},
+			"serverInfo": map[string]any{
+				"name":    "qwic-lsp",
+				"version": s.version,
+			},
+		}
+		s.sendResponse(req.ID, result, nil)
 
-type Server struct {
-	version   string
-	server    *server.Server
-	handler   protocol.Handler
-	documents sync.Map // map[protocol.DocumentUri]string
-}
+	case "initialized":
+		// No response needed for notifications
 
-func NewServer(version string) *Server {
-	s := &Server{
-		version: version,
+	case "shutdown":
+		s.sendResponse(req.ID, nil, nil)
+
+	case "exit":
+		// client requested exit
+
+	case "textDocument/didOpen":
+		var params struct {
+			TextDocument struct {
+				URI  string `json:"uri"`
+				Text string `json:"text"`
+			} `json:"textDocument"`
+		}
+		if err := json.Unmarshal(req.Params, &params); err == nil {
+			s.documents.Store(params.TextDocument.URI, params.TextDocument.Text)
+			s.publishDiagnostics(params.TextDocument.URI, params.TextDocument.Text)
+		}
+
+	case "textDocument/didChange":
+		var params struct {
+			TextDocument struct {
+				URI string `json:"uri"`
+			} `json:"textDocument"`
+			ContentChanges []struct {
+				Text string `json:"text"`
+			} `json:"contentChanges"`
+		}
+		if err := json.Unmarshal(req.Params, &params); err == nil && len(params.ContentChanges) > 0 {
+			text := params.ContentChanges[len(params.ContentChanges)-1].Text
+			s.documents.Store(params.TextDocument.URI, text)
+			s.publishDiagnostics(params.TextDocument.URI, text)
+		}
+
+	case "textDocument/didClose":
+		var params struct {
+			TextDocument struct {
+				URI string `json:"uri"`
+			} `json:"textDocument"`
+		}
+		if err := json.Unmarshal(req.Params, &params); err == nil {
+			s.documents.Delete(params.TextDocument.URI)
+			s.sendNotification("textDocument/publishDiagnostics", PublishDiagnosticsParams{
+				URI:         params.TextDocument.URI,
+				Diagnostics: []Diagnostic{},
+			})
+		}
+
+	case "textDocument/formatting":
+		var params struct {
+			TextDocument struct {
+				URI string `json:"uri"`
+			} `json:"textDocument"`
+		}
+		if err := json.Unmarshal(req.Params, &params); err == nil {
+			edits := s.formatDocument(params.TextDocument.URI)
+			s.sendResponse(req.ID, edits, nil)
+		} else {
+			s.sendResponse(req.ID, []TextEdit{}, nil)
+		}
+
+	case "textDocument/completion":
+		var params struct {
+			TextDocument struct {
+				URI string `json:"uri"`
+			} `json:"textDocument"`
+			Position Position `json:"position"`
+		}
+		if err := json.Unmarshal(req.Params, &params); err == nil {
+			items := s.complete(params.TextDocument.URI, params.Position)
+			s.sendResponse(req.ID, items, nil)
+		} else {
+			s.sendResponse(req.ID, []CompletionItem{}, nil)
+		}
+
+	case "textDocument/hover":
+		var params struct {
+			TextDocument struct {
+				URI string `json:"uri"`
+			} `json:"textDocument"`
+			Position Position `json:"position"`
+		}
+		if err := json.Unmarshal(req.Params, &params); err == nil {
+			hover := s.hover(params.TextDocument.URI, params.Position)
+			s.sendResponse(req.ID, hover, nil)
+		} else {
+			s.sendResponse(req.ID, nil, nil)
+		}
+
+	case "textDocument/definition":
+		var params struct {
+			TextDocument struct {
+				URI string `json:"uri"`
+			} `json:"textDocument"`
+			Position Position `json:"position"`
+		}
+		if err := json.Unmarshal(req.Params, &params); err == nil {
+			loc := s.definition(params.TextDocument.URI, params.Position)
+			s.sendResponse(req.ID, loc, nil)
+		} else {
+			s.sendResponse(req.ID, nil, nil)
+		}
+
+	default:
+		if req.ID != nil {
+			s.sendResponse(req.ID, nil, &ResponseError{
+				Code:    -32601,
+				Message: "Method not found",
+			})
+		}
 	}
-
-	s.handler = protocol.Handler{
-		Initialize:             s.initialize,
-		Initialized:            s.initialized,
-		Shutdown:               s.shutdown,
-		SetTrace:               s.setTrace,
-		TextDocumentDidOpen:    s.textDocumentDidOpen,
-		TextDocumentDidChange:  s.textDocumentDidChange,
-		TextDocumentDidClose:   s.textDocumentDidClose,
-		TextDocumentFormatting: s.textDocumentFormatting,
-		TextDocumentCompletion: s.textDocumentCompletion,
-		TextDocumentHover:      s.textDocumentHover,
-		TextDocumentDefinition: s.textDocumentDefinition,
-	}
-
-	s.server = server.NewServer(&s.handler, ServerName, false)
-	return s
 }
 
-func (s *Server) RunStdio() error {
-	return s.server.RunStdio()
-}
-
-func (s *Server) initialize(context *glsp.Context, params *protocol.InitializeParams) (any, error) {
-	syncKind := protocol.TextDocumentSyncKindFull
-	capabilities := protocol.ServerCapabilities{
-		TextDocumentSync: syncKind,
-		CompletionProvider: &protocol.CompletionOptions{
-			TriggerCharacters: []string{"."},
-		},
-		HoverProvider:              true,
-		DefinitionProvider:         true,
-		DocumentFormattingProvider: true,
-	}
-
-	return protocol.InitializeResult{
-		Capabilities: capabilities,
-		ServerInfo: &protocol.InitializeResultServerInfo{
-			Name:    ServerName,
-			Version: &s.version,
-		},
-	}, nil
-}
-
-func (s *Server) initialized(context *glsp.Context, params *protocol.InitializedParams) error {
-	return nil
-}
-
-func (s *Server) shutdown(context *glsp.Context) error {
-	return nil
-}
-
-func (s *Server) setTrace(context *glsp.Context, params *protocol.SetTraceParams) error {
-	return nil
-}
-
-func (s *Server) textDocumentDidOpen(context *glsp.Context, params *protocol.DidOpenTextDocumentParams) error {
-	s.documents.Store(params.TextDocument.URI, params.TextDocument.Text)
-	s.publishDiagnostics(context, params.TextDocument.URI, params.TextDocument.Text)
-	return nil
-}
-
-func (s *Server) textDocumentDidChange(context *glsp.Context, params *protocol.DidChangeTextDocumentParams) error {
-	if len(params.ContentChanges) > 0 {
-		text := params.ContentChanges[len(params.ContentChanges)-1].(protocol.TextDocumentContentChangeEventWhole).Text
-		s.documents.Store(params.TextDocument.URI, text)
-		s.publishDiagnostics(context, params.TextDocument.URI, text)
-	}
-	return nil
-}
-
-func (s *Server) textDocumentDidClose(context *glsp.Context, params *protocol.DidCloseTextDocumentParams) error {
-	s.documents.Delete(params.TextDocument.URI)
-	go context.Notify(protocol.ServerTextDocumentPublishDiagnostics, protocol.PublishDiagnosticsParams{
-		URI:         params.TextDocument.URI,
-		Diagnostics: []protocol.Diagnostic{},
+func (s *Server) publishDiagnostics(uri string, content string) {
+	diagnostics := collectDiagnostics(uri, content)
+	s.sendNotification("textDocument/publishDiagnostics", PublishDiagnosticsParams{
+		URI:         uri,
+		Diagnostics: diagnostics,
 	})
-	return nil
 }
 
-func (s *Server) publishDiagnostics(context *glsp.Context, uri protocol.DocumentUri, content string) {
-	go func() {
-		diagnostics := collectDiagnostics(uri, content)
-		context.Notify(protocol.ServerTextDocumentPublishDiagnostics, protocol.PublishDiagnosticsParams{
-			URI:         uri,
-			Diagnostics: diagnostics,
-		})
-	}()
-}
-
-func collectDiagnostics(filename string, content string) []protocol.Diagnostic {
+func collectDiagnostics(filename string, content string) []Diagnostic {
 	_, checkDiagnostics := sema.Check(filename, content)
-	lspDiags := make([]protocol.Diagnostic, 0, len(checkDiagnostics))
+	lspDiags := make([]Diagnostic, 0, len(checkDiagnostics))
 
 	for _, diag := range checkDiagnostics {
-		severity := protocol.DiagnosticSeverityError
-
 		line := uint32(0)
 		if diag.Position.Line > 0 {
 			line = uint32(diag.Position.Line - 1)
@@ -131,14 +165,13 @@ func collectDiagnostics(filename string, content string) []protocol.Diagnostic {
 			col = uint32(diag.Position.Column - 1)
 		}
 
-		source := "qwic"
-		lspDiags = append(lspDiags, protocol.Diagnostic{
-			Range: protocol.Range{
-				Start: protocol.Position{Line: line, Character: col},
-				End:   protocol.Position{Line: line, Character: col + 1},
+		lspDiags = append(lspDiags, Diagnostic{
+			Range: Range{
+				Start: Position{Line: line, Character: col},
+				End:   Position{Line: line, Character: col + 1},
 			},
-			Severity: &severity,
-			Source:   &source,
+			Severity: 1, // Error
+			Source:   "qwic",
 			Message:  diag.Message,
 		})
 	}
@@ -146,16 +179,16 @@ func collectDiagnostics(filename string, content string) []protocol.Diagnostic {
 	return lspDiags
 }
 
-func (s *Server) textDocumentFormatting(context *glsp.Context, params *protocol.DocumentFormattingParams) ([]protocol.TextEdit, error) {
-	val, ok := s.documents.Load(params.TextDocument.URI)
+func (s *Server) formatDocument(uri string) []TextEdit {
+	val, ok := s.documents.Load(uri)
 	if !ok {
-		return nil, nil
+		return []TextEdit{}
 	}
 	content := val.(string)
 
-	formatted, diags := qwicformat.Source(params.TextDocument.URI, content)
+	formatted, diags := qwicformat.Source(uri, content)
 	if len(diags) > 0 || formatted == content {
-		return nil, nil
+		return []TextEdit{}
 	}
 
 	lines := strings.Split(content, "\n")
@@ -166,13 +199,13 @@ func (s *Server) textDocumentFormatting(context *glsp.Context, params *protocol.
 		lastChar = uint32(len(lines[len(lines)-1]))
 	}
 
-	return []protocol.TextEdit{
+	return []TextEdit{
 		{
-			Range: protocol.Range{
-				Start: protocol.Position{Line: 0, Character: 0},
-				End:   protocol.Position{Line: lastLine, Character: lastChar},
+			Range: Range{
+				Start: Position{Line: 0, Character: 0},
+				End:   Position{Line: lastLine, Character: lastChar},
 			},
 			NewText: formatted,
 		},
-	}, nil
+	}
 }

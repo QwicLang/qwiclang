@@ -6,10 +6,12 @@
 
 **A lightweight, readable, statically typed language that compiles to fast native executables.**
 
-[![Version](https://img.shields.io/badge/version-v0.1.0--alpha-blue.svg?style=flat-square)](https://github.com/QwicLang/qwiclang)
-[![Go Report Card](https://img.shields.io/badge/go%20report-A%2B-brightgreen.svg?style=flat-square)](https://github.com/QwicLang/qwiclang)
-[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg?style=flat-square)](https://github.com/QwicLang/qwiclang)
-[![Tests](https://img.shields.io/badge/tests-passing-success.svg?style=flat-square)](https://github.com/QwicLang/qwiclang)
+> [!WARNING]
+> **Experimental Project (Pre-Release / v0.1.0-alpha)**: QwicLang is actively evolving. Language specifications, APIs, and tooling are subject to change.
+
+[![Version](https://img.shields.io/badge/version-v0.1.0--alpha-blue.svg?style=flat-square)](https://github.com/QwicLang/qwiclang/releases)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/QwicLang/qwiclang/build-binaries.yml?branch=main&style=flat-square&label=build)](https://github.com/QwicLang/qwiclang/actions/workflows/build-binaries.yml)
+[![Tests](https://img.shields.io/badge/status-experimental-orange.svg?style=flat-square)](https://github.com/QwicLang/qwiclang)
 [![Go Version](https://img.shields.io/badge/Go-%3E%3D%201.22-00ADD8.svg?style=flat-square&logo=go)](https://golang.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENCE)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](https://github.com/QwicLang/qwiclang/pulls)

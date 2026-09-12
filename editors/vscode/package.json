@@ -1,0 +1,39 @@
+{
+  "name": "qwic-lang",
+  "displayName": "QwicLang",
+  "description": "Syntax highlighting, language configuration, and LSP for QwicLang",
+  "version": "0.1.0",
+  "publisher": "qwiclang",
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "qwic",
+        "aliases": [
+          "Qwic",
+          "qwic"
+        ],
+        "extensions": [
+          ".qw"
+        ],
+        "configuration": "./language-configuration.json",
+        "icon": {
+          "light": "./icons/qwic.svg",
+          "dark": "./icons/qwic.svg"
+        }
+      }
+    ],
+    "grammars": [
+      {
+        "language": "qwic",
+        "scopeName": "source.qw",
+        "path": "./syntaxes/qwic.tmLanguage.json"
+      }
+    ]
+  }
+}
