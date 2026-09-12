@@ -90,18 +90,29 @@ type Server struct {
 	version   string
 	documents sync.Map // map[string]string
 	writerMu  sync.Mutex
+	reader    io.Reader
 	writer    io.Writer
 }
 
 func NewServer(version string) *Server {
 	return &Server{
 		version: version,
+		reader:  os.Stdin,
 		writer:  os.Stdout,
 	}
 }
 
+func (s *Server) SetIO(in io.Reader, out io.Writer) {
+	s.reader = in
+	s.writer = out
+}
+
 func (s *Server) RunStdio() error {
-	reader := bufio.NewReader(os.Stdin)
+	return s.Run()
+}
+
+func (s *Server) Run() error {
+	reader := bufio.NewReader(s.reader)
 	for {
 		// Read headers
 		contentLength := -1

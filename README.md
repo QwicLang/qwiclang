@@ -52,6 +52,16 @@ Qwic Source (.qw) ➔ Lexer ➔ Parser / AST ➔ Semantic Analysis ➔ IR ➔ Na
 - 🔒 **Explicit Visibility:** Module-level boundaries and clear `public` / `private` encapsulation.
 - 🛠️ **Batteries-Included CLI:** Everything you need via `qwic build`, `qwic run`, `qwic check`, and `qwic fmt`.
 
+## 🖥️ Supported Platforms
+
+QwicLang is built and tested continuously across major operating systems:
+
+| Platform | Architecture | Binary | Backend Toolchain | Status |
+| :--- | :--- | :--- | :--- | :--- |
+| **Linux** | `x86_64` (amd64) | `qwic` | `gcc` / `clang` |  Tier 1 |
+| **macOS** | Apple Silicon (`arm64`) | `qwic` | `clang` (Apple Clang) |  Tier 1 |
+| **Windows** | `x86_64` (amd64) | `qwic.exe` | MinGW-w64 (`gcc` / UCRT) |  Tier 1 |
+
 ---
 
 ## 🚀 Quick Start
@@ -59,7 +69,7 @@ Qwic Source (.qw) ➔ Lexer ➔ Parser / AST ➔ Semantic Analysis ➔ IR ➔ Na
 ### Prerequisites
 
 - [Go 1.22+](https://golang.org/dl/)
-- A C compiler (`cc`, `gcc`, or `clang`) available on your `PATH`
+- A standard C compiler (`cc`, `gcc`, or `clang`) available on your `PATH`
 
 ### 1. Installation
 
@@ -258,6 +268,7 @@ The `qwic` binary comes with built-in commands for the complete development work
 | `build` | `qwic build <file.qw> [-o output]` | Compiles source file and dependencies into an executable |
 | `check` | `qwic check <file.qw>` | Runs lexical, parsing, semantic, and IR checks without building |
 | `fmt` | `qwic fmt <file.qw>` | Formats Qwic source code with consistent indentation |
+| `lsp` | `qwic lsp` | Starts the zero-dependency Language Server Protocol service over stdio |
 | `clean` | `qwic clean [file.qw]` | Cleans up compiler build artifacts and temporary files |
 | `help` | `qwic --help` | Displays available commands and flags |
 
