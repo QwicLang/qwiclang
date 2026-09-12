@@ -12,6 +12,7 @@ import (
 	"qwiclang/internal/diagnostic"
 	qwicfmt "qwiclang/internal/format"
 	"qwiclang/internal/ir"
+	"qwiclang/internal/lsp"
 	"qwiclang/internal/parser"
 	"qwiclang/internal/sema"
 	"qwiclang/internal/stdlib"
@@ -45,6 +46,8 @@ func run(args []string) int {
 		return runFmt(args[1:])
 	case "clean":
 		return runClean(args[1:])
+	case "lsp":
+		return runLSP(args[1:])
 	default:
 		fmt.Fprintf(os.Stderr, "unknown command %q\n\n", args[0])
 		printHelp()
@@ -291,6 +294,15 @@ func executableName(name string) string {
 	return name
 }
 
+func runLSP(args []string) int {
+	server := lsp.NewServer(Version)
+	if err := server.RunStdio(); err != nil {
+		fmt.Fprintf(os.Stderr, "lsp error: %v\n", err)
+		return 1
+	}
+	return 0
+}
+
 func printHelp() {
 	fmt.Println(`qwic - QwicLang compiler
 
@@ -300,6 +312,7 @@ Usage:
   qwic check <source.qw>
   qwic fmt <source.qw>
   qwic clean [source.qw]
+  qwic lsp
   qwic --version
   qwic --help`)
 }
