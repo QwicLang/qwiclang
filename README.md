@@ -12,7 +12,7 @@
 [![Version](https://img.shields.io/badge/version-v0.1.0--alpha-blue.svg?style=flat-square)](https://github.com/QwicLang/qwiclang/releases)
 [![Build Status](https://img.shields.io/github/actions/workflow/status/QwicLang/qwiclang/build-binaries.yml?branch=main&style=flat-square&label=build)](https://github.com/QwicLang/qwiclang/actions/workflows/build-binaries.yml)
 [![Tests](https://img.shields.io/badge/status-experimental-orange.svg?style=flat-square)](https://github.com/QwicLang/qwiclang)
-[![Go Version](https://img.shields.io/badge/Go-%3E%3D%201.22-00ADD8.svg?style=flat-square&logo=go)](https://golang.org)
+[![Go Version](https://img.shields.io/badge/Go-%3E%3D%201.24-00ADD8.svg?style=flat-square&logo=go)](https://go.dev)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENCE)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](https://github.com/QwicLang/qwiclang/pulls)
 
@@ -71,7 +71,7 @@ QwicLang is built and tested continuously across major operating systems:
 
 ### Prerequisites
 
-- [Go 1.22+](https://golang.org/dl/)
+- [Go 1.24+](https://go.dev/dl/)
 - A standard C compiler (`cc`, `gcc`, or `clang`) available on your `PATH`
 - Git, when installing packages from the shared package catalog
 

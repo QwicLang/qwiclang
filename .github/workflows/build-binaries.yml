@@ -46,6 +46,10 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+          check-latest: true
+
+      - name: Report toolchain
+        run: go version
 
       - name: Set up Windows C compiler
         if: runner.os == 'Windows'
