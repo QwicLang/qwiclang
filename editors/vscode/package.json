@@ -2,7 +2,7 @@
   "name": "qwic-lang",
   "displayName": "QwicLang",
   "description": "Syntax highlighting, language configuration, and LSP for QwicLang",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "qwiclang",
   "engines": {
     "vscode": "^1.75.0"

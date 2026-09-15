@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+    tags:
+      - "v*"
   pull_request:
     branches:
       - main
@@ -51,6 +53,25 @@ jobs:
       - name: Report toolchain
         run: go version
 
+      - name: Read compiler version
+        id: version
+        shell: bash
+        run: |
+          version="$(go run ./cmd/qwic --version)"
+          version="${version#qwic version }"
+
+          if [[ -z "${version}" || "${version}" == *" "* ]]; then
+            echo "Unable to read a valid compiler version" >&2
+            exit 1
+          fi
+
+          if [[ "${GITHUB_REF_TYPE}" == "tag" && "${GITHUB_REF_NAME}" != "${version}" ]]; then
+            echo "Release tag ${GITHUB_REF_NAME} does not match compiler version ${version}" >&2
+            exit 1
+          fi
+
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+
       - name: Set up Windows C compiler
         if: runner.os == 'Windows'
         uses: msys2/setup-msys2@v2
@@ -73,8 +94,49 @@ jobs:
           GOARCH: ${{ matrix.goarch }}
           GOOS: ${{ matrix.goos }}
 
-      - name: Upload binary
+      - name: Package binary
+        shell: pwsh
+        run: |
+          $archive = "dist/qwic-${{ matrix.name }}-${{ steps.version.outputs.version }}.zip"
+          Compress-Archive -LiteralPath "dist/${{ matrix.binary }}" -DestinationPath $archive
+
+      - name: Upload packaged binary
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.artifact }}
-          path: dist/${{ matrix.binary }}
+          name: ${{ matrix.artifact }}-${{ steps.version.outputs.version }}
+          path: dist/qwic-${{ matrix.name }}-${{ steps.version.outputs.version }}.zip
+          if-no-files-found: error
+
+  release:
+    name: Publish release assets
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Download packaged binaries
+        uses: actions/download-artifact@v4
+        with:
+          pattern: qwic-*-${{ github.ref_name }}
+          path: release-assets
+          merge-multiple: true
+
+      - name: Create GitHub prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
+            gh release upload "${GITHUB_REF_NAME}" release-assets/*.zip --clobber
+          else
+            gh release create "${GITHUB_REF_NAME}" release-assets/*.zip \
+              --verify-tag \
+              --prerelease \
+              --title "QwicLang ${GITHUB_REF_NAME}" \
+              --notes-file RELEASE-NOTE.md
+          fi

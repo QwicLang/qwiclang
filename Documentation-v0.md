@@ -1,6 +1,6 @@
 # QwicLang
 
-## v0.1 Language Documentation
+## v0.1.0-alpha.1 Language Documentation
 
 **Fast. Native. Precise.**
 

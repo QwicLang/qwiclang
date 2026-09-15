@@ -50,7 +50,7 @@ func TestGetIdentifierAtPosition(t *testing.T) {
 }
 
 func TestServerProtocolHandling(t *testing.T) {
-	server := NewServer("v0.1.0-alpha")
+	server := NewServer("v0.1.0-alpha.1")
 	docURI := "file:///test.qw"
 	docText := "import math\npublic func main() {\n    math.abs(-5.0)\n}"
 
@@ -83,4 +83,3 @@ func TestServerProtocolHandling(t *testing.T) {
 		t.Fatal("expected definition location for main function, got nil")
 	}
 }
-

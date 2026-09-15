@@ -17,7 +17,7 @@ import (
 	"qwiclang/internal/sema"
 )
 
-const Version = "v0.1.0-alpha"
+const Version = "v0.1.0-alpha.1"
 
 func main() {
 	os.Exit(run(os.Args[1:]))
