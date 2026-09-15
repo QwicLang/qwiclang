@@ -1,6 +1,6 @@
-# QwicLang v0.1.0-alpha.1
+# QwicLang v0.1.0-alpha-1
 
-QwicLang `v0.1.0-alpha.1` is the first public developer preview of the Qwic
+QwicLang `v0.1.0-alpha-1` is the first public developer preview of the Qwic
 compiler, runtime, package workflow, and editor tooling.
 
 This release delivers an end-to-end compiler that accepts `.qw` source,
@@ -123,9 +123,9 @@ Release archives are built and tested through GitHub Actions:
 
 | Platform | Architecture | Release archive |
 | --- | --- | --- |
-| Linux | AMD64 | `qwic-linux-amd64-v0.1.0-alpha.1.zip` |
-| Windows | AMD64 | `qwic-windows-amd64-v0.1.0-alpha.1.zip` |
-| macOS | Apple Silicon | `qwic-macos-arm64-v0.1.0-alpha.1.zip` |
+| Linux | AMD64 | `qwic-linux-amd64-v0.1.0-alpha-1.zip` |
+| Windows | AMD64 | `qwic-windows-amd64-v0.1.0-alpha-1.zip` |
+| macOS | Apple Silicon | `qwic-macos-arm64-v0.1.0-alpha-1.zip` |
 
 ## Installation
 
