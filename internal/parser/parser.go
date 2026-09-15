@@ -75,11 +75,54 @@ func (parser *Parser) parseDeclaration() ast.Declaration {
 			if parser.match(token.Func) {
 				return parser.parseFunctionDeclaration(start, visibility, turbo)
 			}
-			parser.errorAtCurrent("expected function declaration")
+			if parser.match(token.Type, token.Struct) {
+				return parser.parseTypeDeclaration(start, visibility)
+			}
+			parser.errorAtCurrent("expected function or type declaration")
 			parser.synchronizeTopLevel()
 			return nil
 		}
 	}
+}
+
+func (parser *Parser) parseTypeDeclaration(start token.Position, visibility ast.Visibility) ast.Declaration {
+	name, ok := parser.consumeIdentifier("expected type name")
+	if !ok {
+		parser.synchronizeTopLevel()
+		return nil
+	}
+	if !parser.consume(token.LBrace, "expected '{' after type name") {
+		parser.synchronizeTopLevel()
+		return nil
+	}
+
+	declaration := &ast.TypeDeclaration{Name: name.Lexeme, Visibility: visibility, Pos: start}
+	parser.skipStatementBoundaries()
+	for !parser.check(token.RBrace) && !parser.isAtEnd() {
+		fieldName, fieldOK := parser.consumeIdentifier("expected field name")
+		if !fieldOK {
+			parser.synchronizeStatement()
+			parser.skipStatementBoundaries()
+			continue
+		}
+		if !parser.consume(token.Colon, "expected ':' after field name") {
+			parser.synchronizeStatement()
+			continue
+		}
+		fieldType, typeOK := parser.parseTypeName("expected field type")
+		if !typeOK {
+			parser.synchronizeStatement()
+			continue
+		}
+		declaration.Fields = append(declaration.Fields, ast.TypeField{
+			Name: fieldName.Lexeme, TypeName: fieldType, Pos: fieldName.Start,
+		})
+		parser.match(token.Comma)
+		parser.skipStatementBoundaries()
+	}
+	parser.consume(token.RBrace, "expected '}' after type fields")
+	parser.consumeOptionalStatementEnd()
+	return declaration
 }
 
 func (parser *Parser) parseModuleDeclaration(start token.Position) ast.Declaration {
@@ -103,10 +146,44 @@ func (parser *Parser) parseImportDeclaration(start token.Position) ast.Declarati
 }
 
 func (parser *Parser) parseFunctionDeclaration(start token.Position, visibility ast.Visibility, turbo bool) ast.Declaration {
-	name, ok := parser.consumeIdentifier("expected function name")
-	if !ok {
-		parser.synchronizeTopLevel()
-		return nil
+	owner := ""
+	receiver := ""
+	var name token.Token
+	if parser.match(token.LParen) {
+		receiverToken, ok := parser.consumeIdentifier("expected receiver name")
+		if !ok || !parser.consume(token.Colon, "expected ':' after receiver name") {
+			parser.synchronizeTopLevel()
+			return nil
+		}
+		ownerName, ok := parser.parseTypeName("expected receiver type")
+		if !ok || !parser.consume(token.RParen, "expected ')' after receiver") {
+			parser.synchronizeTopLevel()
+			return nil
+		}
+		methodName, ok := parser.consumeIdentifier("expected method name after receiver")
+		if !ok {
+			parser.synchronizeTopLevel()
+			return nil
+		}
+		owner = ownerName
+		receiver = receiverToken.Lexeme
+		name = methodName
+	} else {
+		var ok bool
+		name, ok = parser.consumeIdentifier("expected function name")
+		if !ok {
+			parser.synchronizeTopLevel()
+			return nil
+		}
+		if parser.match(token.Dot) {
+			owner = name.Lexeme
+			methodName, methodOK := parser.consumeIdentifier("expected static function name after '.'")
+			if !methodOK {
+				parser.synchronizeTopLevel()
+				return nil
+			}
+			name = methodName
+		}
 	}
 
 	if !parser.consume(token.LParen, "expected '(' after function name") {
@@ -121,13 +198,13 @@ func (parser *Parser) parseFunctionDeclaration(start token.Position, visibility 
 	}
 
 	returnType := "void"
-	if parser.match(token.Colon) {
-		typeName, ok := parser.consumeIdentifier("expected return type")
+	if parser.match(token.Colon, token.ReturnArrow) {
+		typeName, ok := parser.parseTypeName("expected return type")
 		if !ok {
 			parser.synchronizeTopLevel()
 			return nil
 		}
-		returnType = typeName.Lexeme
+		returnType = typeName
 	}
 
 	body := parser.parseBlock()
@@ -138,6 +215,8 @@ func (parser *Parser) parseFunctionDeclaration(start token.Position, visibility 
 
 	return &ast.FunctionDeclaration{
 		Name:       name.Lexeme,
+		Owner:      owner,
+		Receiver:   receiver,
 		Visibility: visibility,
 		Turbo:      turbo,
 		Parameters: parameters,
@@ -158,16 +237,17 @@ func (parser *Parser) parseParameters() []ast.Parameter {
 		if !ok {
 			return parameters
 		}
-		if !parser.consume(token.Colon, "expected ':' after parameter name") {
-			return parameters
-		}
-		typeName, ok := parser.consumeIdentifier("expected parameter type")
-		if !ok {
-			return parameters
+		typeName := "any"
+		if parser.match(token.Colon) {
+			parsedType, typeOK := parser.parseTypeName("expected parameter type")
+			if !typeOK {
+				return parameters
+			}
+			typeName = parsedType
 		}
 		parameters = append(parameters, ast.Parameter{
 			Name:     name.Lexeme,
-			TypeName: typeName.Lexeme,
+			TypeName: typeName,
 			Pos:      name.Start,
 		})
 
@@ -213,9 +293,48 @@ func (parser *Parser) parseStatement() ast.Statement {
 		return parser.parseWhileStatement(parser.previous().Start)
 	case parser.match(token.For):
 		return parser.parseForStatement(parser.previous().Start)
+	case parser.match(token.Try):
+		return parser.parseTryStatement(parser.previous().Start)
+	case parser.match(token.Throw):
+		return parser.parseThrowStatement(parser.previous().Start)
 	default:
 		return parser.parseAssignmentOrExpressionStatement()
 	}
+}
+
+func (parser *Parser) parseTryStatement(start token.Position) ast.Statement {
+	tryBlock := parser.parseBlock()
+	if tryBlock == nil {
+		parser.synchronizeStatement()
+		return nil
+	}
+	for parser.match(token.Newline) {
+	}
+	if !parser.consume(token.Catch, "expected 'catch' after try block") {
+		parser.synchronizeStatement()
+		return nil
+	}
+	if !parser.consume(token.LParen, "expected '(' after catch") {
+		parser.synchronizeStatement()
+		return nil
+	}
+	variable, ok := parser.consumeIdentifier("expected catch variable")
+	if !ok || !parser.consume(token.RParen, "expected ')' after catch variable") {
+		parser.synchronizeStatement()
+		return nil
+	}
+	catchBlock := parser.parseBlock()
+	if catchBlock == nil {
+		parser.synchronizeStatement()
+		return nil
+	}
+	return &ast.TryStatement{TryBlock: tryBlock, CatchVariable: variable.Lexeme, CatchBlock: catchBlock, Pos: start}
+}
+
+func (parser *Parser) parseThrowStatement(start token.Position) ast.Statement {
+	value := parser.parseExpression()
+	parser.consumeOptionalStatementEnd()
+	return &ast.ThrowStatement{Value: value, Pos: start}
 }
 
 func (parser *Parser) parseVariableDeclaration(mutable bool, start token.Position) ast.Statement {
@@ -227,12 +346,12 @@ func (parser *Parser) parseVariableDeclaration(mutable bool, start token.Positio
 
 	typeName := ""
 	if parser.match(token.Colon) {
-		typeToken, ok := parser.consumeIdentifier("expected variable type")
+		parsedType, ok := parser.parseTypeName("expected variable type")
 		if !ok {
 			parser.synchronizeStatement()
 			return nil
 		}
-		typeName = typeToken.Lexeme
+		typeName = parsedType
 	}
 
 	if !parser.consume(token.Assign, "expected '=' in variable declaration") {
@@ -332,19 +451,17 @@ func (parser *Parser) parseForStatement(start token.Position) ast.Statement {
 
 func (parser *Parser) parseAssignmentOrExpressionStatement() ast.Statement {
 	start := parser.peek().Start
-	if parser.check(token.Identifier) && parser.checkNext(token.Assign) {
-		name := parser.advance()
-		parser.advance()
+	expression := parser.parseExpression()
+	if parser.match(token.Assign) {
 		value := parser.parseExpression()
 		parser.consumeOptionalStatementEnd()
 		return &ast.AssignmentStatement{
-			Name:  name.Lexeme,
-			Value: value,
-			Pos:   start,
+			Target: expression,
+			Value:  value,
+			Pos:    start,
 		}
 	}
 
-	expression := parser.parseExpression()
 	parser.consumeOptionalStatementEnd()
 	return &ast.ExpressionStatement{
 		Expression: expression,
@@ -368,6 +485,10 @@ func (parser *Parser) parseBinaryExpression(minPrecedence int) ast.Expression {
 
 		parser.advance()
 		right := parser.parseBinaryExpression(precedence + 1)
+		if operator.Kind == token.Range {
+			left = &ast.RangeExpression{Start: left, End: right, Pos: operator.Start}
+			continue
+		}
 		left = &ast.BinaryExpression{
 			Left:     left,
 			Operator: operator.Kind,
@@ -396,20 +517,26 @@ func (parser *Parser) parseCallExpression() ast.Expression {
 	expression := parser.parsePrimaryExpression()
 
 	for {
+		if parser.check(token.LBrace) && isTypeReference(expression) {
+			start := parser.advance().Start
+			expression = parser.parseTypeLiteral(expression, start)
+			continue
+		}
+
 		// Index or Slice access: collection[index] or collection[start:end]
 		if parser.match(token.LBracket) {
 			start := parser.previous().Start
-			
+
 			// Check if it's a slice [start:end]
 			// We need to peek ahead or parse the first expression and check for ':'
 			// Since parseExpression consumes tokens, we'll use a simplified approach for v0
-			
+
 			// To properly support [start:end], we check if the first expr is followed by ':'
 			// This requires the parser to be able to handle the ':' token
-			
+
 			// For this implementation, we'll parse the first expression
 			first := parser.parseExpression()
-			
+
 			if parser.match(token.Colon) {
 				end := parser.parseExpression()
 				parser.consume(token.RBracket, "expected ']' after slice end")
@@ -432,10 +559,11 @@ func (parser *Parser) parseCallExpression() ast.Expression {
 
 		// Dot selector
 		if parser.match(token.Dot) {
-			name, ok := parser.consumeIdentifier("expected selector name after '.'")
-			if !ok {
+			if !parser.match(token.Identifier, token.Type) {
+				parser.errorAtCurrent("expected selector name after '.'")
 				return expression
 			}
+			name := parser.previous()
 			expression = &ast.SelectorExpression{
 				Left: expression,
 				Name: name.Lexeme,
@@ -454,10 +582,16 @@ func (parser *Parser) parseCallExpression() ast.Expression {
 			Pos:    start,
 		}
 
+		parser.skipNewlines()
 		if !parser.check(token.RParen) {
 			for {
 				call.Arguments = append(call.Arguments, parser.parseExpression())
+				parser.skipNewlines()
 				if !parser.match(token.Comma) {
+					break
+				}
+				parser.skipNewlines()
+				if parser.check(token.RParen) {
 					break
 				}
 			}
@@ -492,6 +626,9 @@ func (parser *Parser) parsePrimaryExpression() ast.Expression {
 	case parser.match(token.LBrace):
 		return parser.parseDictionaryLiteral(current.Start)
 	case parser.match(token.LParen):
+		if parser.looksLikeLambda() {
+			return parser.parseLambdaExpression(current.Start)
+		}
 		return parser.parseTupleLiteral(current.Start)
 	default:
 		parser.errorAtCurrent("expected expression")
@@ -502,14 +639,143 @@ func (parser *Parser) parsePrimaryExpression() ast.Expression {
 	}
 }
 
+func (parser *Parser) looksLikeLambda() bool {
+	depth := 0
+	for index := parser.current; index < len(parser.tokens); index++ {
+		switch parser.tokens[index].Kind {
+		case token.LParen:
+			depth++
+		case token.RParen:
+			if depth > 0 {
+				depth--
+				continue
+			}
+			next := index + 1
+			if next < len(parser.tokens) && parser.tokens[next].Kind == token.FatArrow {
+				return true
+			}
+			if next >= len(parser.tokens) || parser.tokens[next].Kind != token.Colon {
+				return false
+			}
+			for next++; next < len(parser.tokens); next++ {
+				if parser.tokens[next].Kind == token.FatArrow {
+					return true
+				}
+				if parser.tokens[next].Kind != token.Identifier && parser.tokens[next].Kind != token.Dot {
+					return false
+				}
+			}
+			return false
+		}
+	}
+	return false
+}
+
+func (parser *Parser) parseLambdaExpression(start token.Position) ast.Expression {
+	var parameters []ast.Parameter
+	if !parser.check(token.RParen) {
+		for {
+			name, ok := parser.consumeIdentifier("expected lambda parameter name")
+			if !ok {
+				break
+			}
+			typeName := "any"
+			if parser.match(token.Colon) {
+				parsedType, typeOK := parser.parseTypeName("expected lambda parameter type")
+				if !typeOK {
+					break
+				}
+				typeName = parsedType
+			}
+			parameters = append(parameters, ast.Parameter{Name: name.Lexeme, TypeName: typeName, Pos: name.Start})
+			if !parser.match(token.Comma) {
+				break
+			}
+		}
+	}
+	parser.consume(token.RParen, "expected ')' after lambda parameters")
+	returnType := "any"
+	if parser.match(token.Colon) {
+		parsedType, ok := parser.parseTypeName("expected lambda return type")
+		if ok {
+			returnType = parsedType
+		}
+	}
+	parser.consume(token.FatArrow, "expected '=>' after lambda signature")
+	body := parser.parseBlock()
+	if body == nil {
+		body = &ast.BlockStatement{Pos: start}
+	}
+	return &ast.LambdaExpression{Parameters: parameters, ReturnType: returnType, Body: body, Pos: start}
+}
+
+func (parser *Parser) parseTypeName(message string) (string, bool) {
+	first, ok := parser.consumeIdentifier(message)
+	if !ok {
+		return "", false
+	}
+	parts := []string{first.Lexeme}
+	for parser.match(token.Dot) {
+		next, nextOK := parser.consumeIdentifier("expected type name after '.'")
+		if !nextOK {
+			return strings.Join(parts, "."), false
+		}
+		parts = append(parts, next.Lexeme)
+	}
+	return strings.Join(parts, "."), true
+}
+
+func (parser *Parser) parseTypeLiteral(typeExpression ast.Expression, start token.Position) ast.Expression {
+	literal := &ast.TypeLiteralExpression{Type: typeExpression, Pos: start}
+	parser.skipStatementBoundaries()
+	for !parser.check(token.RBrace) && !parser.isAtEnd() {
+		name, ok := parser.consumeIdentifier("expected field name in type literal")
+		if !ok {
+			parser.synchronizeStatement()
+			break
+		}
+		parser.consume(token.Colon, "expected ':' after field name")
+		literal.Fields = append(literal.Fields, ast.TypeFieldValue{Name: name.Lexeme, Value: parser.parseExpression(), Pos: name.Start})
+		parser.match(token.Comma)
+		parser.skipStatementBoundaries()
+	}
+	parser.consume(token.RBrace, "expected '}' after type literal")
+	return literal
+}
+
+func isTypeReference(expression ast.Expression) bool {
+	switch node := expression.(type) {
+	case *ast.IdentifierExpression:
+		return startsWithUppercase(node.Name)
+	case *ast.SelectorExpression:
+		return startsWithUppercase(node.Name)
+	default:
+		return false
+	}
+}
+
+func startsWithUppercase(name string) bool {
+	if name == "" {
+		return false
+	}
+	first := rune(name[0])
+	return first >= 'A' && first <= 'Z'
+}
+
 // parseArrayLiteral parses: [1, 2, "a", "b"]
 func (parser *Parser) parseArrayLiteral(start token.Position) ast.Expression {
 	var elements []ast.Expression
 
+	parser.skipNewlines()
 	if !parser.check(token.RBracket) {
 		for {
 			elements = append(elements, parser.parseExpression())
+			parser.skipNewlines()
 			if !parser.match(token.Comma) {
+				break
+			}
+			parser.skipNewlines()
+			if parser.check(token.RBracket) {
 				break
 			}
 		}
@@ -523,6 +789,7 @@ func (parser *Parser) parseArrayLiteral(start token.Position) ast.Expression {
 func (parser *Parser) parseDictionaryLiteral(start token.Position) ast.Expression {
 	var pairs []ast.DictionaryPair
 
+	parser.skipNewlines()
 	if !parser.check(token.RBrace) {
 		for {
 			key := parser.parseExpression()
@@ -530,7 +797,12 @@ func (parser *Parser) parseDictionaryLiteral(start token.Position) ast.Expressio
 			value := parser.parseExpression()
 			pairs = append(pairs, ast.DictionaryPair{Key: key, Value: value})
 
+			parser.skipNewlines()
 			if !parser.match(token.Comma) {
+				break
+			}
+			parser.skipNewlines()
+			if parser.check(token.RBrace) {
 				break
 			}
 		}
@@ -694,18 +966,20 @@ func parseExpressionFragment(filename, source string, position token.Position) (
 
 func binaryPrecedence(kind token.Kind) int {
 	switch kind {
-	case token.Or:
+	case token.Range:
 		return 1
-	case token.And:
+	case token.Or:
 		return 2
-	case token.Equal, token.NotEqual:
+	case token.And:
 		return 3
-	case token.Less, token.LessEqual, token.Greater, token.GreaterEqual:
+	case token.Equal, token.NotEqual:
 		return 4
-	case token.Plus, token.Minus:
+	case token.Less, token.LessEqual, token.Greater, token.GreaterEqual:
 		return 5
-	case token.Star, token.Slash, token.Percent:
+	case token.Plus, token.Minus:
 		return 6
+	case token.Star, token.Slash, token.Percent:
+		return 7
 	default:
 		return 0
 	}
@@ -748,6 +1022,11 @@ func (parser *Parser) skipStatementBoundaries() {
 	}
 }
 
+func (parser *Parser) skipNewlines() {
+	for parser.match(token.Newline) {
+	}
+}
+
 func (parser *Parser) isStatementEnd() bool {
 	return parser.check(token.Newline) || parser.check(token.Semicolon) || parser.check(token.RBrace) || parser.check(token.EOF)
 }
@@ -769,7 +1048,7 @@ func (parser *Parser) synchronizeTopLevel() {
 		if parser.match(token.Newline, token.Semicolon) {
 			return
 		}
-		if parser.check(token.Func, token.Public, token.Private, token.Turbo) {
+		if parser.check(token.Func, token.Type, token.Struct, token.Public, token.Private, token.Turbo) {
 			return
 		}
 		parser.advance()

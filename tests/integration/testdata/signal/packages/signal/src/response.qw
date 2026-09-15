@@ -1,0 +1,14 @@
+public type Response {
+    status: int
+    body: any
+    headers: map
+}
+
+public func Response.new(status: int, body: any): Response {
+    return Response {
+        status: status,
+        body: body,
+        headers: {"Content-Type": "application/json"},
+    }
+}
+

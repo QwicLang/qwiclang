@@ -1964,7 +1964,7 @@ channels
 FFI
 SIMD
 advanced optimization
-package manager
+versioned package registry and lockfiles
 language server
 debugger
 reflection

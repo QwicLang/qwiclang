@@ -234,6 +234,61 @@ func TestParseReportsSourceLocatedSyntaxError(t *testing.T) {
 	}
 }
 
+func TestParseTypesMethodsLambdasAndTryCatch(t *testing.T) {
+	program := parseValid(t, `type Counter {
+    value: int
+}
+
+func (counter: Counter) add(delta: int) -> int {
+    try {
+        const transform = (value: int): int => {
+            return value + delta
+        }
+        return transform(counter.value)
+    } catch (error) {
+        throw error
+    }
+}
+`)
+
+	declaration, ok := program.Declarations[0].(*ast.TypeDeclaration)
+	if !ok || declaration.Name != "Counter" || len(declaration.Fields) != 1 {
+		t.Fatalf("type declaration = %#v, want Counter with one field", program.Declarations[0])
+	}
+	method := program.Declarations[1].(*ast.FunctionDeclaration)
+	if method.Owner != "Counter" || method.Receiver != "counter" || method.Name != "add" || method.ReturnType != "int" {
+		t.Fatalf("method = %#v, want Counter.add returning int", method)
+	}
+	tryStatement, ok := method.Body.Statements[0].(*ast.TryStatement)
+	if !ok || tryStatement.CatchVariable != "error" {
+		t.Fatalf("statement = %#v, want try/catch(error)", method.Body.Statements[0])
+	}
+	variable := tryStatement.TryBlock.Statements[0].(*ast.VariableDeclaration)
+	if _, ok := variable.Value.(*ast.LambdaExpression); !ok {
+		t.Fatalf("value = %T, want lambda", variable.Value)
+	}
+	if _, ok := tryStatement.CatchBlock.Statements[0].(*ast.ThrowStatement); !ok {
+		t.Fatalf("catch statement = %T, want throw", tryStatement.CatchBlock.Statements[0])
+	}
+}
+
+func TestParseMultilineCollectionsCallsAndTypeProperty(t *testing.T) {
+	program := parseValid(t, `func main() {
+    const routes = [
+        {"path": "/status", "handler": (req: any): any => { return req },},
+    ]
+    register(
+        routes,
+    )
+    print(routes[0].handler.type)
+}
+`)
+	function := program.Declarations[0].(*ast.FunctionDeclaration)
+	if len(function.Body.Statements) != 3 {
+		t.Fatalf("statement count = %d, want 3", len(function.Body.Statements))
+	}
+}
+
 func TestProgramDebugString(t *testing.T) {
 	program := parseValid(t, `public func main() {
     print("Hello, Qwic")

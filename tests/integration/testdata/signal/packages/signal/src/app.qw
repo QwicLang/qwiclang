@@ -1,0 +1,70 @@
+import http
+
+public type App {
+    routes: list
+}
+
+public func App.new(): App {
+    return App { routes: [] }
+}
+
+public func (app: App) routes(routeList: list) {
+    app.routes = app.routes + routeList
+}
+
+public func (app: App) run(port: int) {
+    print(f"Signal server starting on port {port}")
+    http.listen(port, (req: any): any => {
+        return app.dispatch(req)
+    })
+}
+
+private func (app: App) matchPath(pattern: string, path: string): bool {
+    if pattern == path {
+        return true
+    }
+    if pattern.contains("{") && path.split("/").length == pattern.split("/").length {
+        return true
+    }
+    return false
+}
+
+private func (app: App) extractParams(pattern: string, path: string): map {
+    const patternParts = pattern.split("/")
+    const pathParts = path.split("/")
+    const params = {}
+    for i in 0..patternParts.length - 1 {
+        const patternPart = patternParts[i]
+        if patternPart.starts_with("{") && patternPart.ends_with("}") {
+            const key = patternPart.substring(1, patternPart.length - 1)
+            if key.contains(":") {
+                const parts = key.split(":")
+                params[parts[0]] = app.castValue(pathParts[i], parts[1])
+            } else {
+                params[key] = pathParts[i]
+            }
+        }
+    }
+    return params
+}
+
+private func (app: App) castValue(value: string, kind: string): any {
+    if kind == "int" {
+        return value.to_int()
+    }
+    if kind == "bool" {
+        return value == "true"
+    }
+    return value
+}
+
+private func (app: App) dispatch(req: Request): Response {
+    for route in app.routes {
+        if route.method == req.method && app.matchPath(route.path, req.path) {
+            req.params = app.extractParams(route.path, req.path)
+            return route.handler(req)
+        }
+    }
+    return Response.new(404, {"error": "Not Found"})
+}
+

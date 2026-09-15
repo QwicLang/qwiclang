@@ -26,6 +26,12 @@ The C backend currently supports the Phase 4 IR instruction set:
 - conditional branches
 - jumps
 - formatted strings
+- record allocation and field access
+- direct static and instance method calls
+- portable closures for lambdas and named function references
+- tagged `any` values and dynamic field/index operations
+- struct conversion at typed/dynamic boundaries
+- try/catch frames and throws
 
 `print(value)` is emitted as a call into the Qwic runtime. It supports `int`,
 `float`, `nano`, `string`, and `bool` values.
@@ -37,6 +43,20 @@ then writes the final string with a second `snprintf` call.
 Standard-library data-structure calls are lowered to runtime C functions. The
 opaque collection types are emitted as `void *` handles in the bootstrap C
 backend.
+
+Record declarations become forward-declared C structs and pointer-backed
+values. Instance methods receive their explicitly named record receiver as the
+first native argument. Lambdas use one callback ABI on every target and carry a
+runtime context containing captured values.
+
+Dynamic values use a tagged runtime representation. Calls box typed arguments
+when entering `any` code and unbox them when returning to typed code. User
+records convert to dictionary-backed values at this boundary, which lets HTTP
+callbacks enter typed package APIs without weakening those APIs internally.
+
+Try/catch uses runtime-managed frames around standard C `setjmp`/`longjmp`.
+Returns from protected blocks explicitly unwind active frames before leaving the
+function.
 
 ## CLI
 
@@ -57,7 +77,10 @@ or failed build unless the codegen API is called with `KeepC`.
   implemented in a later phase.
 - String literals preserve lexer spelling and are emitted directly as C string
   literals.
-- F-string formatting supports `int`, `float`, `nano`, `string`, and `bool`
+- F-string formatting supports `int`, `float`, `nano`, `string`, `bool`, and `any`
   values. Width, precision, and conversion specifiers are not implemented yet.
-- Data-structure packages store strings only and use opaque runtime pointers in
-  generated C.
+- Collection storage is heterogeneous through tagged values and uses opaque
+  runtime pointers in generated C.
+- Record values are not automatically reclaimed yet.
+- Lambda captures are snapshots and are not automatically reclaimed yet.
+- Thrown values and catch bindings are strings; typed errors are deferred.

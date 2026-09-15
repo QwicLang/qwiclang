@@ -1,0 +1,32 @@
+type Counter {
+    value: int
+}
+
+func Counter.new(value: int): Counter {
+    return Counter { value: value }
+}
+
+func (counter: Counter) add(delta: int): int {
+    counter.value = counter.value + delta
+    return counter.value
+}
+
+func checkedDouble(value: int): int {
+    if value < 0 {
+        throw "value must not be negative"
+    }
+    return value * 2
+}
+
+public func main() {
+    const counter = Counter.new(20)
+    const double = (value: int): int => {
+        return checkedDouble(value)
+    }
+
+    try {
+        print(double(counter.add(1)))
+    } catch (error) {
+        print(error)
+    }
+}

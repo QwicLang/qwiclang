@@ -1,0 +1,25 @@
+import signal
+
+public func getUser(req: signal.Request): any {
+    const id = req.params["id"]
+    return signal.Response.new(200, {"userId": id, "name": "Qwic User " + id.to_string()})
+}
+
+public func createItem(req: signal.Request): any {
+    try {
+        const data = req.body.validate({"title": "string", "priority": "int"})
+        return signal.Response.new(201, {"status": "created", "item": data})
+    } catch (error) {
+        return signal.Response.new(400, {"error": error})
+    }
+}
+
+public func main() {
+    const app = signal.App.new()
+    app.routes([
+        {"path": "/user/{id:int}", "method": "GET", "handler": getUser},
+        {"path": "/item", "method": "POST", "handler": createItem},
+    ])
+    app.run(18080)
+}
+

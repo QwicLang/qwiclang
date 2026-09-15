@@ -65,6 +65,25 @@ type Parameter struct {
 	Pos      token.Position
 }
 
+type TypeField struct {
+	Name     string
+	TypeName string
+	Pos      token.Position
+}
+
+type TypeDeclaration struct {
+	Name       string
+	Visibility Visibility
+	Fields     []TypeField
+	Pos        token.Position
+}
+
+func (*TypeDeclaration) declarationNode() {}
+
+func (declaration *TypeDeclaration) Position() token.Position {
+	return declaration.Pos
+}
+
 type ModuleDeclaration struct {
 	Name string
 	Pos  token.Position
@@ -89,6 +108,8 @@ func (declaration *ImportDeclaration) Position() token.Position {
 
 type FunctionDeclaration struct {
 	Name       string
+	Owner      string
+	Receiver   string
 	Visibility Visibility
 	Turbo      bool
 	Parameters []Parameter
@@ -129,9 +150,9 @@ func (statement *VariableDeclaration) Position() token.Position {
 }
 
 type AssignmentStatement struct {
-	Name  string
-	Value Expression
-	Pos   token.Position
+	Target Expression
+	Value  Expression
+	Pos    token.Position
 }
 
 func (*AssignmentStatement) statementNode() {}
@@ -179,6 +200,30 @@ type WhileStatement struct {
 	Condition Expression
 	Body      *BlockStatement
 	Pos       token.Position
+}
+
+type TryStatement struct {
+	TryBlock      *BlockStatement
+	CatchVariable string
+	CatchBlock    *BlockStatement
+	Pos           token.Position
+}
+
+func (*TryStatement) statementNode() {}
+
+func (statement *TryStatement) Position() token.Position {
+	return statement.Pos
+}
+
+type ThrowStatement struct {
+	Value Expression
+	Pos   token.Position
+}
+
+func (*ThrowStatement) statementNode() {}
+
+func (statement *ThrowStatement) Position() token.Position {
+	return statement.Pos
 }
 
 func (*WhileStatement) statementNode() {}
@@ -298,6 +343,18 @@ type BinaryExpression struct {
 	Pos      token.Position
 }
 
+type RangeExpression struct {
+	Start Expression
+	End   Expression
+	Pos   token.Position
+}
+
+func (*RangeExpression) expressionNode() {}
+
+func (expression *RangeExpression) Position() token.Position {
+	return expression.Pos
+}
+
 func (*BinaryExpression) expressionNode() {}
 
 func (expression *BinaryExpression) Position() token.Position {
@@ -308,6 +365,37 @@ type CallExpression struct {
 	Callee    Expression
 	Arguments []Expression
 	Pos       token.Position
+}
+
+type LambdaExpression struct {
+	Parameters []Parameter
+	ReturnType string
+	Body       *BlockStatement
+	Pos        token.Position
+}
+
+func (*LambdaExpression) expressionNode() {}
+
+func (expression *LambdaExpression) Position() token.Position {
+	return expression.Pos
+}
+
+type TypeFieldValue struct {
+	Name  string
+	Value Expression
+	Pos   token.Position
+}
+
+type TypeLiteralExpression struct {
+	Type   Expression
+	Fields []TypeFieldValue
+	Pos    token.Position
+}
+
+func (*TypeLiteralExpression) expressionNode() {}
+
+func (expression *TypeLiteralExpression) Position() token.Position {
+	return expression.Pos
 }
 
 func (*CallExpression) expressionNode() {}
@@ -394,7 +482,15 @@ func writeNode(builder *strings.Builder, node Node, indent int) {
 			writeNode(builder, declaration, indent+1)
 		}
 	case *FunctionDeclaration:
-		fmt.Fprintf(builder, "%sFunctionDeclaration name=%s visibility=%s turbo=%t return=%s\n", prefix, n.Name, n.Visibility, n.Turbo, n.ReturnType)
+		name := n.Name
+		if n.Owner != "" {
+			name = n.Owner + "." + n.Name
+		}
+		if n.Receiver != "" {
+			fmt.Fprintf(builder, "%sFunctionDeclaration name=%s receiver=%s visibility=%s turbo=%t return=%s\n", prefix, name, n.Receiver, n.Visibility, n.Turbo, n.ReturnType)
+		} else {
+			fmt.Fprintf(builder, "%sFunctionDeclaration name=%s visibility=%s turbo=%t return=%s\n", prefix, name, n.Visibility, n.Turbo, n.ReturnType)
+		}
 		for _, parameter := range n.Parameters {
 			fmt.Fprintf(builder, "%s  Parameter name=%s type=%s\n", prefix, parameter.Name, parameter.TypeName)
 		}
@@ -403,6 +499,11 @@ func writeNode(builder *strings.Builder, node Node, indent int) {
 		fmt.Fprintf(builder, "%sModuleDeclaration name=%s\n", prefix, n.Name)
 	case *ImportDeclaration:
 		fmt.Fprintf(builder, "%sImportDeclaration name=%s\n", prefix, n.Name)
+	case *TypeDeclaration:
+		fmt.Fprintf(builder, "%sTypeDeclaration name=%s visibility=%s\n", prefix, n.Name, n.Visibility)
+		for _, field := range n.Fields {
+			fmt.Fprintf(builder, "%s  Field name=%s type=%s\n", prefix, field.Name, field.TypeName)
+		}
 	case *BlockStatement:
 		builder.WriteString(prefix + "BlockStatement\n")
 		for _, statement := range n.Statements {
@@ -416,7 +517,8 @@ func writeNode(builder *strings.Builder, node Node, indent int) {
 		fmt.Fprintf(builder, "%sVariableDeclaration kind=%s name=%s type=%s\n", prefix, mutability, n.Name, n.TypeName)
 		writeNode(builder, n.Value, indent+1)
 	case *AssignmentStatement:
-		fmt.Fprintf(builder, "%sAssignmentStatement name=%s\n", prefix, n.Name)
+		builder.WriteString(prefix + "AssignmentStatement\n")
+		writeNode(builder, n.Target, indent+1)
 		writeNode(builder, n.Value, indent+1)
 	case *ReturnStatement:
 		builder.WriteString(prefix + "ReturnStatement\n")
@@ -437,6 +539,13 @@ func writeNode(builder *strings.Builder, node Node, indent int) {
 		builder.WriteString(prefix + "WhileStatement\n")
 		writeNode(builder, n.Condition, indent+1)
 		writeNode(builder, n.Body, indent+1)
+	case *TryStatement:
+		fmt.Fprintf(builder, "%sTryStatement catch=%s\n", prefix, n.CatchVariable)
+		writeNode(builder, n.TryBlock, indent+1)
+		writeNode(builder, n.CatchBlock, indent+1)
+	case *ThrowStatement:
+		builder.WriteString(prefix + "ThrowStatement\n")
+		writeNode(builder, n.Value, indent+1)
 	case *ForStatement:
 		fmt.Fprintf(builder, "%sForStatement variable=%s\n", prefix, n.Variable)
 		writeNode(builder, n.Iterable, indent+1)
@@ -465,11 +574,28 @@ func writeNode(builder *strings.Builder, node Node, indent int) {
 		fmt.Fprintf(builder, "%sBinaryExpression operator=%s\n", prefix, n.Operator)
 		writeNode(builder, n.Left, indent+1)
 		writeNode(builder, n.Right, indent+1)
+	case *RangeExpression:
+		builder.WriteString(prefix + "RangeExpression\n")
+		writeNode(builder, n.Start, indent+1)
+		writeNode(builder, n.End, indent+1)
 	case *CallExpression:
 		builder.WriteString(prefix + "CallExpression\n")
 		writeNode(builder, n.Callee, indent+1)
 		for _, argument := range n.Arguments {
 			writeNode(builder, argument, indent+1)
+		}
+	case *LambdaExpression:
+		fmt.Fprintf(builder, "%sLambdaExpression return=%s\n", prefix, n.ReturnType)
+		for _, parameter := range n.Parameters {
+			fmt.Fprintf(builder, "%s  Parameter name=%s type=%s\n", prefix, parameter.Name, parameter.TypeName)
+		}
+		writeNode(builder, n.Body, indent+1)
+	case *TypeLiteralExpression:
+		builder.WriteString(prefix + "TypeLiteralExpression\n")
+		writeNode(builder, n.Type, indent+1)
+		for _, field := range n.Fields {
+			fmt.Fprintf(builder, "%s  FieldValue name=%s\n", prefix, field.Name)
+			writeNode(builder, field.Value, indent+2)
 		}
 	case *ArrayLiteralExpression:
 		fmt.Fprintf(builder, "%sArrayLiteralExpression (length=%d)\n", prefix, len(n.Elements))

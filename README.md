@@ -45,10 +45,13 @@ Qwic Source (.qw) ➔ Lexer ➔ Parser / AST ➔ Semantic Analysis ➔ IR ➔ Na
 
 - 🚀 **Native Machine Code:** Zero VM or interpreter overhead. Programs compile directly to fast, standalone executables.
 - 🎯 **Clean & Familiar Syntax:** Elegant declarations with `let` and `const`, block scoping, and optional semicolons.
-- 🔬 **High-Precision `nano` Type:** Native fixed-point numeric type tailored for physics, animations, delta times, and simulation math.
+- 🔬 **Experimental `nano` Type:** A distinct numeric type for timing and simulation work; the bootstrap backend currently stores it as `double`.
 - 🔤 **Python-Style F-Strings:** String interpolation with `{expression}` syntax out of the box.
 - 📦 **Built-in Collections:** First-class literals and operations for `list`, `set`, `dictionary`, and `tuple`.
-- 🌐 **Rich Standard Library:** Built-in modules including `strings`, `time`, `fs`, `sync`, `crypto`, `net`, `json`, and `http` (with TLS support).
+- 🧩 **User-Defined Types:** Define record types, construct typed values, and attach checked instance methods.
+- λ **First-Class Lambdas:** Pass typed anonymous functions and capture surrounding values.
+- ⚠️ **Recoverable Errors:** Use `throw` with structured `try` / `catch` control flow.
+- 🌐 **Growing Standard Library:** Runtime-backed strings, collections, JSON, and a synchronous cross-platform HTTP listener, with additional modules under active development.
 - 🔒 **Explicit Visibility:** Module-level boundaries and clear `public` / `private` encapsulation.
 - 🛠️ **Batteries-Included CLI:** Everything you need via `qwic build`, `qwic run`, `qwic check`, and `qwic fmt`.
 
@@ -70,6 +73,7 @@ QwicLang is built and tested continuously across major operating systems:
 
 - [Go 1.22+](https://golang.org/dl/)
 - A standard C compiler (`cc`, `gcc`, or `clang`) available on your `PATH`
+- Git, when installing packages from the shared package catalog
 
 ### 1. Installation
 
@@ -116,6 +120,27 @@ Or compile to a standalone executable:
 qwic build hello.qw -o hello
 ./hello
 ```
+
+### 3. Install Shared Packages
+
+Qwic downloads packages once into `~/qwic/packages` and reuses them across all
+of your projects:
+
+```bash
+qwic install signal
+```
+
+Packages come from the
+[Qwic package catalog](https://github.com/QwicLang/packages). An installed
+package can be imported from any project:
+
+```qwic
+import signal
+```
+
+Project-specific packages can live under `packages/<name>/src`. See the
+[package system documentation](docs/packages.md) for package layout, lookup
+order, and current limitations.
 
 ---
 
@@ -212,24 +237,64 @@ public func main() {
 }
 ```
 
+### Types, Methods, Lambdas, and Errors
+
+```qwic
+type Counter {
+    value: int
+}
+
+func Counter.new(value: int): Counter {
+    return Counter { value: value }
+}
+
+func (counter: Counter) add(delta: int): int {
+    counter.value = counter.value + delta
+    return counter.value
+}
+
+public func main() {
+    const counter = Counter.new(40)
+    const offset: int = 1
+    const doubleAfterOffset = (value: int): int => {
+        return (value + offset) * 2
+    }
+
+    try {
+        print(doubleAfterOffset(counter.add(0)))
+    } catch (error) {
+        print(error)
+    }
+}
+```
+
+`new` is the static constructor convention. Instance methods declare a named
+receiver explicitly; Qwic has no implicit `this`. Lambda captures use by-value
+snapshots, and thrown values are strings. See
+[Types, methods, lambdas, and errors](docs/types-methods-lambdas-errors.md).
+
 ### Standard Library: HTTP & JSON
 
 ```qwic
-import http
-import json
-import time
+import signal
+
+public func status(req: signal.Request): any {
+    return signal.Response.new(200, {"status": "ok"})
+}
 
 public func main() {
-    const req = http.request("https://api.github.com")
-    req.set_header("User-Agent", "QwicLang")
-
-    const resp = http.send(req)
-    print(f"HTTP Status: {resp.status}")
-
-    const now = time.now()
-    print(f"Timestamp: {now}")
+    const app = signal.App.new()
+    app.routes([
+        {"path": "/status", "method": "GET", "handler": status},
+    ])
+    app.run(8080)
 }
 ```
+
+Signal uses the runtime JSON parser, heterogeneous maps, captured callbacks,
+and the HTTP/1.1 listener. The current server is synchronous and does not yet
+provide TLS, streaming, keep-alive, or concurrent request handling. See the
+[Signal compatibility notes](docs/signal.md).
 
 ### Multi-File Modules & Encapsulation
 
@@ -268,6 +333,7 @@ The `qwic` binary comes with built-in commands for the complete development work
 | `build` | `qwic build <file.qw> [-o output]` | Compiles source file and dependencies into an executable |
 | `check` | `qwic check <file.qw>` | Runs lexical, parsing, semantic, and IR checks without building |
 | `fmt` | `qwic fmt <file.qw>` | Formats Qwic source code with consistent indentation |
+| `install` | `qwic install <package>` | Installs a package once into the shared user package directory |
 | `lsp` | `qwic lsp` | Starts the zero-dependency Language Server Protocol service over stdio |
 | `clean` | `qwic clean [file.qw]` | Cleans up compiler build artifacts and temporary files |
 | `help` | `qwic --help` | Displays available commands and flags |
@@ -329,12 +395,15 @@ go run ./cmd/qwic run examples/nano.qw
 - [x] Primitive types (`int`, `float`, `nano`, `string`, `bool`, `void`)
 - [x] Control flow (`if`/`else`, `while`, `for ... in`)
 - [x] Built-in collections (`list`, `dict`, `set`, `tuple`)
-- [x] Standard library (`strings`, `time`, `fs`, `sync`, `crypto`, `net`, `json`, `http`)
+- [ ] Complete standard library (`strings`, collections, JSON, and HTTP listening are runtime-backed; other modules remain partial)
 - [x] Native executable generation via bootstrap backend
 - [ ] Direct LLVM IR code generator
 - [ ] Concurrency model (`spawn` & `await`)
-- [ ] Struct declarations and methods
-- [ ] Package manager & registry
+- [x] Record type declarations and methods
+- [x] Typed lambdas with by-value captures
+- [x] String-based `try` / `catch` / `throw`
+- [x] Shared package installation and project package resolution
+- [ ] Versioned package registry, updates, and lockfiles
 - [ ] Self-hosting compiler in QwicLang
 
 ---

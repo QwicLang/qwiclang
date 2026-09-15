@@ -122,6 +122,16 @@ func TestCheckAllowsInterpolatedStringExpressions(t *testing.T) {
 `)
 }
 
+func TestCheckAllowsStringConcatenationAndDynamicFormatting(t *testing.T) {
+	checkValid(t, `func value(): any { return 42 }
+
+func main() {
+    const message = "Qwic " + "Signal"
+    print(f"{message}: {value()}")
+}
+`)
+}
+
 func TestCheckRejectsUnknownInterpolatedVariable(t *testing.T) {
 	assertDiagnostic(t, `func main() {
     print(f"Hello, {missing}")
@@ -191,14 +201,14 @@ func TestCheckRejectsDataStructurePackageWithoutImport(t *testing.T) {
 `, "module \"lists\" is not imported")
 }
 
-func TestCheckRejectsWrongDataStructureValueType(t *testing.T) {
-	assertDiagnostic(t, `import lists
+func TestCheckAllowsHeterogeneousDataStructureValues(t *testing.T) {
+	checkValid(t, `import lists
 
 func main() {
     const values: list = lists.new()
     lists.push(values, 42)
 }
-`, "cannot pass argument of type \"int\" to parameter \"value\" of type \"string\"")
+`)
 }
 
 func TestCheckAllowsPublicImportedModuleFunction(t *testing.T) {
@@ -244,6 +254,23 @@ private func validateUser() {
 	assertContainsDiagnostic(t, diagnostics, "function \"validateUser\" is private to module \"users\"")
 }
 
+func TestCheckRejectsModuleDeclarationThatConflictsWithPackageName(t *testing.T) {
+	_, diagnostics := CheckFiles([]SourceFile{{
+		Filename: "api.qw",
+		Module:   "expected",
+		Source: `module different
+
+public func value(): int {
+    return 1
+}
+`,
+	}})
+	if len(diagnostics) == 0 {
+		t.Fatal("expected module mismatch diagnostic")
+	}
+	assertContainsDiagnostic(t, diagnostics, `module "different" does not match package name "expected"`)
+}
+
 func TestCheckRejectsUnimportedModuleFunction(t *testing.T) {
 	_, diagnostics := CheckFiles([]SourceFile{
 		{Filename: "main.qw", Source: `public func main() {
@@ -276,6 +303,56 @@ func TestCheckDiagnosticsContainSourceLocation(t *testing.T) {
 	if diagnostics[0].Position.Line == 0 || diagnostics[0].Position.Column == 0 {
 		t.Fatalf("diagnostic has invalid position: %#v", diagnostics[0].Position)
 	}
+}
+
+func TestCheckAllowsTypesMethodsLambdasAndTryCatch(t *testing.T) {
+	checkValid(t, `type Counter {
+    value: int
+}
+
+func Counter.new(value: int): Counter {
+    return Counter { value: value }
+}
+
+func (counter: Counter) add(delta: int): int {
+    counter.value = counter.value + delta
+    return counter.value
+}
+
+public func main() {
+    const counter = Counter.new(40)
+    const double = (value: int): int => { return value * 2 }
+    try {
+        print(double(counter.add(1)))
+    } catch (error) {
+        print(error)
+    }
+}
+`)
+}
+
+func TestCheckRejectsInvalidTypeField(t *testing.T) {
+	assertDiagnostic(t, `type User { name: string }
+func main() {
+    const user = User { missing: "Qwic" }
+}
+`, `type "User" has no field "missing"`)
+}
+
+func TestCheckAllowsLambdaCapture(t *testing.T) {
+	checkValid(t, `func main() {
+    const offset: int = 1
+    const add = (value: int): int => { return value + offset }
+    print(add(2))
+}
+`)
+}
+
+func TestCheckRejectsNonStringThrow(t *testing.T) {
+	assertDiagnostic(t, `func main() {
+    throw 42
+}
+`, `throw value must be string`)
 }
 
 func checkValid(t *testing.T, source string) *Result {

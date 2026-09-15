@@ -26,9 +26,13 @@ const (
 	For
 	In
 	Struct
+	Type
 	Import
 	Module
 	Turbo
+	Try
+	Catch
+	Throw
 	True
 	False
 	Null
@@ -48,6 +52,9 @@ const (
 	And
 	Or
 	Not
+	FatArrow
+	ReturnArrow
+	Range
 
 	LParen
 	RParen
@@ -91,9 +98,13 @@ var keywords = map[string]Kind{
 	"for":     For,
 	"in":      In,
 	"struct":  Struct,
+	"type":    Type,
 	"import":  Import,
 	"module":  Module,
 	"turbo":   Turbo,
+	"try":     Try,
+	"catch":   Catch,
+	"throw":   Throw,
 	"true":    True,
 	"false":   False,
 	"null":    Null,
@@ -150,12 +161,20 @@ func (kind Kind) String() string {
 		return "In"
 	case Struct:
 		return "Struct"
+	case Type:
+		return "Type"
 	case Import:
 		return "Import"
 	case Module:
 		return "Module"
 	case Turbo:
 		return "Turbo"
+	case Try:
+		return "Try"
+	case Catch:
+		return "Catch"
+	case Throw:
+		return "Throw"
 	case True:
 		return "True"
 	case False:
@@ -192,6 +211,12 @@ func (kind Kind) String() string {
 		return "Or"
 	case Not:
 		return "Not"
+	case FatArrow:
+		return "FatArrow"
+	case ReturnArrow:
+		return "ReturnArrow"
+	case Range:
+		return "Range"
 	case LParen:
 		return "LParen"
 	case RParen:

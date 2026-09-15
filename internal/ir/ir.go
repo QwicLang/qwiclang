@@ -10,7 +10,18 @@ import (
 )
 
 type Module struct {
+	Types     []TypeDefinition
 	Functions []Function
+}
+
+type TypeDefinition struct {
+	Name   string
+	Fields []Field
+}
+
+type Field struct {
+	Name string
+	Type types.Type
 }
 
 func (module Module) DebugString() string {
@@ -36,8 +47,10 @@ type Function struct {
 	Visibility ast.Visibility
 	Turbo      bool
 	Parameters []Parameter
+	Captures   []Parameter
 	ReturnType types.Type
 	Blocks     []Block
+	Lambda     bool
 }
 
 type Parameter struct {
@@ -135,6 +148,115 @@ func (instruction *Call) String() string {
 		prefix = instruction.Target + " = "
 	}
 	return fmt.Sprintf("%scall %s(%s): %s", prefix, instruction.Function, strings.Join(instruction.Args, ", "), instruction.Type)
+}
+
+type FunctionReference struct {
+	Target   string
+	Function string
+	Type     types.Type
+	Captures []string
+}
+
+func (*FunctionReference) instructionNode() {}
+
+func (instruction *FunctionReference) String() string {
+	return fmt.Sprintf("%s = function %s captures=(%s): %s", instruction.Target, instruction.Function, strings.Join(instruction.Captures, ", "), instruction.Type)
+}
+
+type IndirectCall struct {
+	Target string
+	Callee string
+	Args   []string
+	Type   types.Type
+}
+
+func (*IndirectCall) instructionNode() {}
+
+func (instruction *IndirectCall) String() string {
+	prefix := ""
+	if instruction.Target != "" {
+		prefix = instruction.Target + " = "
+	}
+	return fmt.Sprintf("%scall-indirect %s(%s): %s", prefix, instruction.Callee, strings.Join(instruction.Args, ", "), instruction.Type)
+}
+
+type NewStruct struct {
+	Target string
+	Type   types.Type
+}
+
+func (*NewStruct) instructionNode() {}
+
+func (instruction *NewStruct) String() string {
+	return fmt.Sprintf("%s = new %s", instruction.Target, instruction.Type)
+}
+
+type LoadField struct {
+	Target string
+	Object string
+	Field  string
+	Type   types.Type
+}
+
+func (*LoadField) instructionNode() {}
+
+func (instruction *LoadField) String() string {
+	return fmt.Sprintf("%s = load-field %s.%s: %s", instruction.Target, instruction.Object, instruction.Field, instruction.Type)
+}
+
+type StoreField struct {
+	Object string
+	Field  string
+	Value  string
+}
+
+func (*StoreField) instructionNode() {}
+
+func (instruction *StoreField) String() string {
+	return fmt.Sprintf("store-field %s.%s, %s", instruction.Object, instruction.Field, instruction.Value)
+}
+
+type TryBegin struct {
+	Frame      string
+	TryBlock   string
+	CatchBlock string
+}
+
+func (*TryBegin) instructionNode() {}
+
+func (instruction *TryBegin) String() string {
+	return fmt.Sprintf("try %s, %s, %s", instruction.Frame, instruction.TryBlock, instruction.CatchBlock)
+}
+
+type TryEnd struct {
+	Frame string
+}
+
+func (*TryEnd) instructionNode() {}
+
+func (instruction *TryEnd) String() string {
+	return "try-end " + instruction.Frame
+}
+
+type Catch struct {
+	Target string
+	Frame  string
+}
+
+func (*Catch) instructionNode() {}
+
+func (instruction *Catch) String() string {
+	return fmt.Sprintf("%s = catch %s", instruction.Target, instruction.Frame)
+}
+
+type Throw struct {
+	Value string
+}
+
+func (*Throw) instructionNode() {}
+
+func (instruction *Throw) String() string {
+	return "throw " + instruction.Value
 }
 
 type FormatPart struct {

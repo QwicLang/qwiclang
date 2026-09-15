@@ -247,7 +247,7 @@ func TestLexNewlinesAndSemicolons(t *testing.T) {
 }
 
 func TestLexKeywords(t *testing.T) {
-	assertLexes(t, `public private const let func return if else while struct import module turbo true false null`, []expectedToken{
+	assertLexes(t, `public private const let func return if else while struct type import module turbo try catch throw true false null`, []expectedToken{
 		{"Public", "public"},
 		{"Private", "private"},
 		{"Const", "const"},
@@ -258,9 +258,13 @@ func TestLexKeywords(t *testing.T) {
 		{"Else", "else"},
 		{"While", "while"},
 		{"Struct", "struct"},
+		{"Type", "type"},
 		{"Import", "import"},
 		{"Module", "module"},
 		{"Turbo", "turbo"},
+		{"Try", "try"},
+		{"Catch", "catch"},
+		{"Throw", "throw"},
 		{"True", "true"},
 		{"False", "false"},
 		{"Null", "null"},

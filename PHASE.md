@@ -342,6 +342,12 @@ v0 support:
 - Basic `public`/`private`.
 - Basic modules.
 - Native executable generation.
+- Record types and type literals.
+- Static constructors and instance methods.
+- Typed lambdas with by-value captures.
+- Tagged heterogeneous `any` values.
+- Signal package compatibility through JSON and HTTP listener runtime support.
+- String-based `try`/`catch`/`throw`.
 
 Required demonstrations:
 

@@ -4,14 +4,12 @@ on:
   push:
     branches:
       - main
-    tags:
-      - 'v*'
   pull_request:
     branches:
       - main
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
@@ -23,14 +21,20 @@ jobs:
         include:
           - name: linux-amd64
             os: ubuntu-latest
+            goos: linux
+            goarch: amd64
             artifact: qwic-linux-amd64
             binary: qwic
           - name: windows-amd64
             os: windows-latest
+            goos: windows
+            goarch: amd64
             artifact: qwic-windows-amd64
             binary: qwic.exe
           - name: macos-arm64
             os: macos-latest
+            goos: darwin
+            goarch: arm64
             artifact: qwic-macos-arm64
             binary: qwic
 
@@ -60,33 +64,13 @@ jobs:
 
       - name: Build qwic
         run: go build -trimpath -o dist/${{ matrix.binary }} ./cmd/qwic
+        env:
+          CGO_ENABLED: 0
+          GOARCH: ${{ matrix.goarch }}
+          GOOS: ${{ matrix.goos }}
 
       - name: Upload binary
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
           path: dist/${{ matrix.binary }}
-
-  release:
-    name: Release
-    needs: build
-    if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: dist/
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            dist/qwic-linux-amd64/qwic
-            dist/qwic-windows-amd64/qwic.exe
-            dist/qwic-macos-arm64/qwic
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

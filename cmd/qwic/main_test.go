@@ -69,12 +69,12 @@ func TestRunBuildUsesBundledRuntimeOutsideRepoRoot(t *testing.T) {
 	tempDir := t.TempDir()
 	sourcePath := filepath.Join(tempDir, "main.qw")
 	outputPath := filepath.Join(tempDir, "main")
-	
+
 	// On Windows, add .exe extension
 	if runtime.GOOS == "windows" {
 		outputPath += ".exe"
 	}
-	
+
 	if err := os.WriteFile(sourcePath, []byte(`public func main() {
     print("ok")
 }
@@ -113,6 +113,73 @@ public func main() {
 
 	if exitCode := run([]string{"check", sourcePath}); exitCode != 0 {
 		t.Fatalf("check exit code = %d, want 0", exitCode)
+	}
+}
+
+func TestRunInstallCopiesPackageIntoSharedDirectory(t *testing.T) {
+	catalog := t.TempDir()
+	packageSource := filepath.Join(catalog, "sample", "src")
+	if err := os.MkdirAll(packageSource, 0o755); err != nil {
+		t.Fatalf("create package source: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(packageSource, "sample.qw"), []byte(`public func message(): string {
+    return "sample"
+}
+`), 0o644); err != nil {
+		t.Fatalf("write package source: %v", err)
+	}
+
+	packagesDir := t.TempDir()
+	t.Setenv("QWIC_PACKAGES_REPOSITORY", catalog)
+	t.Setenv("QWIC_PACKAGES_DIR", packagesDir)
+	if exitCode := run([]string{"install", "sample"}); exitCode != 0 {
+		t.Fatalf("install exit code = %d, want 0", exitCode)
+	}
+	if _, err := os.Stat(filepath.Join(packagesDir, "sample", "src", "sample.qw")); err != nil {
+		t.Fatalf("expected installed package source: %v", err)
+	}
+}
+
+func TestRunBuildResolvesPackageFromSharedDirectory(t *testing.T) {
+	packagesDir := t.TempDir()
+	packageSource := filepath.Join(packagesDir, "greeting", "src")
+	if err := os.MkdirAll(packageSource, 0o755); err != nil {
+		t.Fatalf("create package source: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(packageSource, "api.qw"), []byte(`public func message(): string {
+	return helper()
+}
+`), 0o644); err != nil {
+		t.Fatalf("write package source: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(packageSource, "helper.qw"), []byte(`func helper(): string {
+	return "from package"
+}
+`), 0o644); err != nil {
+		t.Fatalf("write package helper: %v", err)
+	}
+
+	projectDir := t.TempDir()
+	sourcePath := filepath.Join(projectDir, "main.qw")
+	if err := os.WriteFile(sourcePath, []byte(`import greeting
+
+public func main() {
+    print(greeting.message())
+}
+`), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	outputPath := filepath.Join(projectDir, "app")
+	if runtime.GOOS == "windows" {
+		outputPath += ".exe"
+	}
+
+	t.Setenv("QWIC_PACKAGES_DIR", packagesDir)
+	if exitCode := run([]string{"build", sourcePath, "-o", outputPath}); exitCode != 0 {
+		t.Fatalf("build exit code = %d, want 0", exitCode)
+	}
+	if _, err := os.Stat(outputPath); err != nil {
+		t.Fatalf("expected executable output: %v", err)
 	}
 }
 

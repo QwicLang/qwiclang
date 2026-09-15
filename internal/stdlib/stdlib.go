@@ -260,31 +260,31 @@ var functions = []Function{
 		Package:     "crypto",
 		Name:        "hex_encode",
 		RuntimeName: "qwic_crypto_hex_encode",
-		Parameters:  []Parameter{
+		Parameters: []Parameter{
 			{Name: "bytes", Type: types.StringType},
 			{Name: "len", Type: types.IntType},
 		},
-		ReturnType:  types.StringType,
+		ReturnType: types.StringType,
 	},
 	{
 		Package:     "crypto",
 		Name:        "base64_encode",
 		RuntimeName: "qwic_crypto_base64_encode",
-		Parameters:  []Parameter{
+		Parameters: []Parameter{
 			{Name: "bytes", Type: types.StringType},
 			{Name: "len", Type: types.IntType},
 		},
-		ReturnType:  types.StringType,
+		ReturnType: types.StringType,
 	},
 	{
 		Package:     "net",
 		Name:        "tcp_connect",
 		RuntimeName: "qwic_net_tcp_connect",
-		Parameters:  []Parameter{
+		Parameters: []Parameter{
 			{Name: "host", Type: types.StringType},
 			{Name: "port", Type: types.IntType},
 		},
-		ReturnType:  types.AnyType,
+		ReturnType: types.AnyType,
 	},
 	{
 		Package:     "net",
@@ -304,21 +304,21 @@ var functions = []Function{
 		Package:     "net",
 		Name:        "tcp_read",
 		RuntimeName: "qwic_net_tcp_read",
-		Parameters:  []Parameter{
+		Parameters: []Parameter{
 			{Name: "conn", Type: types.AnyType},
 			{Name: "max_len", Type: types.IntType},
 		},
-		ReturnType:  types.StringType,
+		ReturnType: types.StringType,
 	},
 	{
 		Package:     "net",
 		Name:        "tcp_write",
 		RuntimeName: "qwic_net_tcp_write",
-		Parameters:  []Parameter{
+		Parameters: []Parameter{
 			{Name: "conn", Type: types.AnyType},
 			{Name: "data", Type: types.StringType},
 		},
-		ReturnType:  types.IntType,
+		ReturnType: types.IntType,
 	},
 	{
 		Package:     "net",
@@ -338,7 +338,7 @@ var functions = []Function{
 		Package:     "json",
 		Name:        "stringify",
 		RuntimeName: "qwic_json_stringify",
-		Parameters:  []Parameter{{Name: "value", Type: types.StringType}},
+		Parameters:  []Parameter{{Name: "value", Type: types.AnyType}},
 		ReturnType:  types.StringType,
 	},
 	{
@@ -352,7 +352,7 @@ var functions = []Function{
 		Package:     "json",
 		Name:        "encode",
 		RuntimeName: "qwic_json_encode",
-		Parameters:  []Parameter{{Name: "value", Type: types.StringType}},
+		Parameters:  []Parameter{{Name: "value", Type: types.AnyType}},
 		ReturnType:  types.StringType,
 	},
 	{
@@ -373,21 +373,21 @@ var functions = []Function{
 		Package:     "http",
 		Name:        "set_method",
 		RuntimeName: "qwic_http_request_set_method",
-		Parameters:  []Parameter{
+		Parameters: []Parameter{
 			{Name: "req", Type: types.AnyType},
 			{Name: "method", Type: types.StringType},
 		},
-		ReturnType:  types.VoidType,
+		ReturnType: types.VoidType,
 	},
 	{
 		Package:     "http",
 		Name:        "set_body",
 		RuntimeName: "qwic_http_request_set_body",
-		Parameters:  []Parameter{
+		Parameters: []Parameter{
 			{Name: "req", Type: types.AnyType},
 			{Name: "body", Type: types.StringType},
 		},
-		ReturnType:  types.VoidType,
+		ReturnType: types.VoidType,
 	},
 	{
 		Package:     "http",
@@ -434,7 +434,7 @@ var functions = []Function{
 		Package:     "lists",
 		Name:        "push",
 		RuntimeName: "qwic_lists_push",
-		Parameters:  []Parameter{{Name: "list", Type: types.ListType}, {Name: "value", Type: types.StringType}},
+		Parameters:  []Parameter{{Name: "list", Type: types.ListType}, {Name: "value", Type: types.AnyType}},
 		ReturnType:  types.VoidType,
 	},
 	{
@@ -442,7 +442,7 @@ var functions = []Function{
 		Name:        "get",
 		RuntimeName: "qwic_lists_get",
 		Parameters:  []Parameter{{Name: "list", Type: types.ListType}, {Name: "index", Type: types.IntType}},
-		ReturnType:  types.StringType,
+		ReturnType:  types.AnyType,
 	},
 	{
 		Package:     "lists",
@@ -455,7 +455,7 @@ var functions = []Function{
 		Package:     "lists",
 		Name:        "contains",
 		RuntimeName: "qwic_lists_contains",
-		Parameters:  []Parameter{{Name: "list", Type: types.ListType}, {Name: "value", Type: types.StringType}},
+		Parameters:  []Parameter{{Name: "list", Type: types.ListType}, {Name: "value", Type: types.AnyType}},
 		ReturnType:  types.BoolType,
 	},
 	{
@@ -475,14 +475,14 @@ var functions = []Function{
 		Package:     "sets",
 		Name:        "add",
 		RuntimeName: "qwic_sets_add",
-		Parameters:  []Parameter{{Name: "set", Type: types.SetType}, {Name: "value", Type: types.StringType}},
+		Parameters:  []Parameter{{Name: "set", Type: types.SetType}, {Name: "value", Type: types.AnyType}},
 		ReturnType:  types.VoidType,
 	},
 	{
 		Package:     "sets",
 		Name:        "contains",
 		RuntimeName: "qwic_sets_contains",
-		Parameters:  []Parameter{{Name: "set", Type: types.SetType}, {Name: "value", Type: types.StringType}},
+		Parameters:  []Parameter{{Name: "set", Type: types.SetType}, {Name: "value", Type: types.AnyType}},
 		ReturnType:  types.BoolType,
 	},
 	{
@@ -502,7 +502,7 @@ var functions = []Function{
 		Package:     "dictionaries",
 		Name:        "set",
 		RuntimeName: "qwic_dictionaries_set",
-		Parameters:  []Parameter{{Name: "dictionary", Type: types.DictType}, {Name: "key", Type: types.StringType}, {Name: "value", Type: types.StringType}},
+		Parameters:  []Parameter{{Name: "dictionary", Type: types.DictType}, {Name: "key", Type: types.StringType}, {Name: "value", Type: types.AnyType}},
 		ReturnType:  types.VoidType,
 	},
 	{
@@ -510,7 +510,7 @@ var functions = []Function{
 		Name:        "get",
 		RuntimeName: "qwic_dictionaries_get",
 		Parameters:  []Parameter{{Name: "dictionary", Type: types.DictType}, {Name: "key", Type: types.StringType}},
-		ReturnType:  types.StringType,
+		ReturnType:  types.AnyType,
 	},
 	{
 		Package:     "dictionaries",
@@ -530,7 +530,7 @@ var functions = []Function{
 		Package:     "tuples",
 		Name:        "new2",
 		RuntimeName: "qwic_tuples_new2",
-		Parameters:  []Parameter{{Name: "first", Type: types.StringType}, {Name: "second", Type: types.StringType}},
+		Parameters:  []Parameter{{Name: "first", Type: types.AnyType}, {Name: "second", Type: types.AnyType}},
 		ReturnType:  types.TupleType,
 	},
 	{
@@ -538,14 +538,14 @@ var functions = []Function{
 		Name:        "first",
 		RuntimeName: "qwic_tuples_first",
 		Parameters:  []Parameter{{Name: "tuple", Type: types.TupleType}},
-		ReturnType:  types.StringType,
+		ReturnType:  types.AnyType,
 	},
 	{
 		Package:     "tuples",
 		Name:        "second",
 		RuntimeName: "qwic_tuples_second",
 		Parameters:  []Parameter{{Name: "tuple", Type: types.TupleType}},
-		ReturnType:  types.StringType,
+		ReturnType:  types.AnyType,
 	},
 	{
 		Package:     "tuples",
@@ -553,6 +553,116 @@ var functions = []Function{
 		RuntimeName: "qwic_tuples_length",
 		Parameters:  []Parameter{{Name: "tuple", Type: types.TupleType}},
 		ReturnType:  types.IntType,
+	},
+	{
+		Package:     "strings",
+		Name:        "split",
+		RuntimeName: "qwic_strings_split",
+		Parameters: []Parameter{
+			{Name: "value", Type: types.StringType},
+			{Name: "separator", Type: types.StringType},
+		},
+		ReturnType: types.Type{Kind: types.List, Parameters: []types.Type{types.StringType}},
+	},
+	{
+		Package:     "strings",
+		Name:        "starts_with",
+		RuntimeName: "qwic_strings_starts_with",
+		Parameters: []Parameter{
+			{Name: "value", Type: types.StringType},
+			{Name: "prefix", Type: types.StringType},
+		},
+		ReturnType: types.BoolType,
+	},
+	{
+		Package:     "strings",
+		Name:        "ends_with",
+		RuntimeName: "qwic_strings_ends_with",
+		Parameters: []Parameter{
+			{Name: "value", Type: types.StringType},
+			{Name: "suffix", Type: types.StringType},
+		},
+		ReturnType: types.BoolType,
+	},
+	{
+		Package:     "strings",
+		Name:        "substring",
+		RuntimeName: "qwic_strings_substring",
+		Parameters: []Parameter{
+			{Name: "value", Type: types.StringType},
+			{Name: "start", Type: types.IntType},
+			{Name: "end", Type: types.IntType},
+		},
+		ReturnType: types.StringType,
+	},
+	{
+		Package:     "strings",
+		Name:        "to_int",
+		RuntimeName: "qwic_strings_to_int",
+		Parameters:  []Parameter{{Name: "value", Type: types.StringType}},
+		ReturnType:  types.IntType,
+	},
+	{
+		Package:     "values",
+		Name:        "to_string",
+		RuntimeName: "qwic_any_to_string",
+		Parameters:  []Parameter{{Name: "value", Type: types.AnyType}},
+		ReturnType:  types.StringType,
+	},
+	{
+		Package:     "lists",
+		Name:        "concat",
+		RuntimeName: "qwic_lists_concat",
+		Parameters: []Parameter{
+			{Name: "left", Type: types.ListType},
+			{Name: "right", Type: types.ListType},
+		},
+		ReturnType: types.ListType,
+	},
+	{
+		Package:     "dictionaries",
+		Name:        "keys",
+		RuntimeName: "qwic_dictionaries_keys",
+		Parameters:  []Parameter{{Name: "dictionary", Type: types.DictType}},
+		ReturnType:  types.Type{Kind: types.List, Parameters: []types.Type{types.StringType}},
+	},
+	{
+		Package:     "http",
+		Name:        "listen",
+		RuntimeName: "qwic_http_listen",
+		Parameters: []Parameter{
+			{Name: "port", Type: types.IntType},
+			{Name: "handler", Type: types.FunctionType([]types.Type{types.AnyType}, types.AnyType)},
+		},
+		ReturnType: types.VoidType,
+	},
+	{
+		Package:     "values",
+		Name:        "index",
+		RuntimeName: "qwic_any_index",
+		Parameters: []Parameter{
+			{Name: "value", Type: types.AnyType},
+			{Name: "index", Type: types.AnyType},
+		},
+		ReturnType: types.AnyType,
+	},
+	{
+		Package:     "values",
+		Name:        "set_index",
+		RuntimeName: "qwic_any_set_index",
+		Parameters: []Parameter{
+			{Name: "value", Type: types.AnyType},
+			{Name: "index", Type: types.AnyType},
+			{Name: "item", Type: types.AnyType},
+		},
+		ReturnType: types.VoidType,
+	},
+	{
+		Package:     "values",
+		Name:        "type",
+		RuntimeName: "qwic_any_type",
+		Parameters:  []Parameter{{Name: "value", Type: types.AnyType}},
+		ReturnType:  types.StringType,
 	},
 }
 

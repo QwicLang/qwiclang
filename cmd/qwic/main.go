@@ -7,16 +7,14 @@ import (
 	"strings"
 
 	"qwiclang"
-	"qwiclang/internal/ast"
 	"qwiclang/internal/codegen"
 	"qwiclang/internal/diagnostic"
 	qwicfmt "qwiclang/internal/format"
 	"qwiclang/internal/ir"
 	"qwiclang/internal/lsp"
-	"qwiclang/internal/parser"
+	"qwiclang/internal/packages"
+	"qwiclang/internal/project"
 	"qwiclang/internal/sema"
-	"qwiclang/internal/stdlib"
-	"qwiclang/internal/token"
 )
 
 const Version = "v0.1.0-alpha"
@@ -46,6 +44,8 @@ func run(args []string) int {
 		return runFmt(args[1:])
 	case "clean":
 		return runClean(args[1:])
+	case "install":
+		return runInstall(args[1:])
 	case "lsp":
 		return runLSP(args[1:])
 	default:
@@ -61,7 +61,7 @@ func runCheck(args []string) int {
 		return 2
 	}
 
-	files, diagnostics := collectSourceFiles(args[0])
+	files, diagnostics := project.CollectSourceFiles(args[0])
 	if len(diagnostics) > 0 {
 		printDiagnostics(diagnostics)
 		return 1
@@ -118,6 +118,30 @@ func runClean(args []string) int {
 	if err := os.RemoveAll(target); err != nil {
 		fmt.Fprintf(os.Stderr, "clean %s: %v\n", target, err)
 		return 1
+	}
+	return 0
+}
+
+func runInstall(args []string) int {
+	if len(args) != 1 {
+		fmt.Fprintln(os.Stderr, "usage: qwic install <package>")
+		return 2
+	}
+
+	installer, err := packages.DefaultInstaller()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "configure package installer: %v\n", err)
+		return 1
+	}
+	result, err := installer.Install(args[0])
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "install package: %v\n", err)
+		return 1
+	}
+	if result.Installed {
+		fmt.Printf("installed %s at %s\n", args[0], result.Path)
+	} else {
+		fmt.Printf("package %s is already installed at %s\n", args[0], result.Path)
 	}
 	return 0
 }
@@ -192,7 +216,7 @@ func buildSource(sourcePath, outputPath string) int {
 	}
 	defer os.RemoveAll(buildDir)
 
-	files, diagnostics := collectSourceFiles(sourcePath)
+	files, diagnostics := project.CollectSourceFiles(sourcePath)
 	if len(diagnostics) > 0 {
 		printDiagnostics(diagnostics)
 		return 1
@@ -230,63 +254,6 @@ func printDiagnostics(diagnostics []diagnostic.Diagnostic) {
 	}
 }
 
-func collectSourceFiles(rootPath string) ([]sema.SourceFile, []diagnostic.Diagnostic) {
-	visited := map[string]bool{}
-	var files []sema.SourceFile
-	var diagnostics []diagnostic.Diagnostic
-
-	var visit func(string)
-	visit = func(path string) {
-		cleanPath, err := filepath.Abs(path)
-		if err != nil {
-			diagnostics = append(diagnostics, diagnostic.Error(emptyPosition(path), fmt.Sprintf("resolve source path: %v", err)))
-			return
-		}
-		if visited[cleanPath] {
-			return
-		}
-		visited[cleanPath] = true
-
-		source, err := os.ReadFile(cleanPath)
-		if err != nil {
-			diagnostics = append(diagnostics, diagnostic.Error(emptyPosition(cleanPath), fmt.Sprintf("read source file: %v", err)))
-			return
-		}
-
-		files = append(files, sema.SourceFile{Filename: cleanPath, Source: string(source)})
-		program, parseDiagnostics := parser.Parse(cleanPath, string(source))
-		if len(parseDiagnostics) > 0 {
-			diagnostics = append(diagnostics, parseDiagnostics...)
-			return
-		}
-
-		for _, importedModule := range importsFor(program) {
-			if stdlib.HasPackage(importedModule) {
-				continue
-			}
-			visit(filepath.Join(filepath.Dir(cleanPath), importedModule+".qw"))
-		}
-	}
-
-	visit(rootPath)
-	return files, diagnostics
-}
-
-func importsFor(program *ast.Program) []string {
-	var imports []string
-	for _, declaration := range program.Declarations {
-		importDeclaration, ok := declaration.(*ast.ImportDeclaration)
-		if ok {
-			imports = append(imports, importDeclaration.Name)
-		}
-	}
-	return imports
-}
-
-func emptyPosition(filename string) token.Position {
-	return token.Position{Filename: filename, Line: 1, Column: 1}
-}
-
 func executableName(name string) string {
 	if name == "" {
 		return "a.out"
@@ -312,6 +279,7 @@ Usage:
   qwic check <source.qw>
   qwic fmt <source.qw>
   qwic clean [source.qw]
+  qwic install <package>
   qwic lsp
   qwic --version
   qwic --help`)

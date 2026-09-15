@@ -10,6 +10,7 @@ qwic run <source.qw>
 qwic check <source.qw>
 qwic fmt <source.qw>
 qwic clean [source.qw]
+qwic install <package>
 qwic --help
 ```
 
@@ -24,6 +25,8 @@ qwic --help
 - `fmt` rewrites one source file with conservative token-based formatting.
 - `clean` removes the default executable for a source file, or `.qwic-cache`
   when no source is provided.
+- `install` downloads a package from the official Qwic package catalog into the
+  shared `~/qwic/packages` directory. Existing installations are reused.
 
 ## Exit Codes
 
@@ -33,7 +36,7 @@ qwic --help
 
 ## Current Limits
 
-- User import resolution is same-directory only. Standard packages such as
-  `strings` are resolved by the compiler.
+- Package installation is not versioned yet and does not provide update or
+  removal commands.
 - The formatter is intentionally conservative and does not preserve comments.
 - `clean` only removes known v0 build artifacts.

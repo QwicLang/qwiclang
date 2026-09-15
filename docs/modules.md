@@ -25,9 +25,9 @@ public func main() {
 }
 ```
 
-`qwic build main.qw` resolves `import users` as `users.qw` in the same
-directory as `main.qw`. Imported source files may define a `module`
-declaration.
+`qwic build main.qw` can resolve `import users` from an installed shared
+package, a project package directory, or the legacy `users.qw` file beside the
+importing source. See [Packages](packages.md) for the complete resolution order.
 
 Standard-library packages such as `strings` are resolved by the compiler and do
 not require a local `strings.qw` file.
@@ -41,7 +41,7 @@ not require a local `strings.qw` file.
 
 ## Current Limits
 
-- User imports resolve only to same-directory `.qw` files.
 - Module aliases are not implemented.
-- Only function symbols participate in module visibility.
-- Package registries and nested module paths are deferred.
+- Public type and function symbols participate in module visibility.
+- Nested module paths are deferred.
+- Package versions and lockfiles are deferred.

@@ -2,6 +2,7 @@ package codegen
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -188,6 +189,141 @@ public func main() {
 		if !strings.Contains(source, want) {
 			t.Fatalf("generated C missing %q:\n%s", want, source)
 		}
+	}
+}
+
+func TestBuildExecutableRunsTypesAndMethods(t *testing.T) {
+	module := buildIR(t, `type Counter {
+    value: int
+}
+
+func Counter.new(value: int): Counter {
+    return Counter { value: value }
+}
+
+func (counter: Counter) add(delta: int): int {
+    counter.value = counter.value + delta
+    return counter.value
+}
+
+public func main() {
+    const counter = Counter.new(40)
+    print(counter.add(2))
+}
+`)
+	outputPath := filepath.Join(t.TempDir(), "methods")
+	if diagnostics := BuildExecutable(module, Options{OutputPath: outputPath, RuntimePath: runtimePath(t)}); len(diagnostics) > 0 {
+		t.Fatalf("expected no diagnostics, got %v", diagnostics)
+	}
+
+	exitCode, output, err := RunExecutable(outputPath)
+	if err != nil {
+		t.Fatalf("run executable: %v", err)
+	}
+	if exitCode != 0 || output != "42\n" {
+		t.Fatalf("exit code = %d, output = %q; want 0 and 42", exitCode, output)
+	}
+}
+
+func TestBuildExecutableRunsLambda(t *testing.T) {
+	module := buildIR(t, `public func main() {
+    const double = (value: int): int => {
+        return value * 2
+    }
+    print(double(21))
+}
+`)
+	outputPath := filepath.Join(t.TempDir(), "lambda")
+	if diagnostics := BuildExecutable(module, Options{OutputPath: outputPath, RuntimePath: runtimePath(t)}); len(diagnostics) > 0 {
+		t.Fatalf("expected no diagnostics, got %v", diagnostics)
+	}
+
+	exitCode, output, err := RunExecutable(outputPath)
+	if err != nil {
+		t.Fatalf("run executable: %v", err)
+	}
+	if exitCode != 0 || output != "42\n" {
+		t.Fatalf("exit code = %d, output = %q; want 0 and 42", exitCode, output)
+	}
+}
+
+func TestBuildExecutableRunsCapturingLambda(t *testing.T) {
+	module := buildIR(t, `public func main() {
+    const base: int = 40
+    const add = (value: int): int => {
+        return base + value
+    }
+    print(add(2))
+}
+`)
+	outputPath := filepath.Join(t.TempDir(), "capturing-lambda")
+	if diagnostics := BuildExecutable(module, Options{OutputPath: outputPath, RuntimePath: runtimePath(t)}); len(diagnostics) > 0 {
+		t.Fatalf("expected no diagnostics, got %v", diagnostics)
+	}
+
+	exitCode, output, err := RunExecutable(outputPath)
+	if err != nil {
+		t.Fatalf("run executable: %v", err)
+	}
+	if exitCode != 0 || output != "42\n" {
+		t.Fatalf("exit code = %d, output = %q; want 0 and 42", exitCode, output)
+	}
+}
+
+func TestBuildExecutableRunsTryCatch(t *testing.T) {
+	module := buildIR(t, `func fail() {
+    throw "boom"
+}
+
+public func main() {
+    try {
+        fail()
+    } catch (error) {
+        print(error)
+    }
+}
+`)
+	outputPath := filepath.Join(t.TempDir(), "try-catch")
+	if diagnostics := BuildExecutable(module, Options{OutputPath: outputPath, RuntimePath: runtimePath(t)}); len(diagnostics) > 0 {
+		t.Fatalf("expected no diagnostics, got %v", diagnostics)
+	}
+
+	exitCode, output, err := RunExecutable(outputPath)
+	if err != nil {
+		t.Fatalf("run executable: %v", err)
+	}
+	if exitCode != 0 || output != "boom\n" {
+		t.Fatalf("exit code = %d, output = %q; want 0 and boom", exitCode, output)
+	}
+}
+
+func TestFeatureCCompilesWithMinGWWhenAvailable(t *testing.T) {
+	compiler, err := exec.LookPath("x86_64-w64-mingw32-gcc")
+	if err != nil {
+		t.Skip("MinGW cross-compiler is not installed")
+	}
+	module := buildIR(t, `type Value { number: int }
+func Value.new(number: int): Value { return Value { number: number } }
+func (value: Value) get(): int { return value.number }
+public func main() {
+    const value = Value.new(42)
+    const read = (item: Value): int => { return item.get() }
+    try { print(read(value)) } catch (error) { print(error) }
+}
+`)
+	source, diagnostics := GenerateC(module)
+	if len(diagnostics) > 0 {
+		t.Fatalf("generate C: %v", diagnostics)
+	}
+	directory := t.TempDir()
+	sourcePath := filepath.Join(directory, "main.c")
+	if err := os.WriteFile(sourcePath, []byte(source), 0o644); err != nil {
+		t.Fatalf("write generated C: %v", err)
+	}
+	outputPath := filepath.Join(directory, "feature.exe")
+	command := exec.Command(compiler, sourcePath, filepath.Join(runtimePath(t), "qwic_runtime.c"), "-I", runtimePath(t), "-lm", "-lws2_32", "-o", outputPath)
+	if output, err := command.CombinedOutput(); err != nil {
+		t.Fatalf("MinGW compile failed: %v\n%s", err, output)
 	}
 }
 

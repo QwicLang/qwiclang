@@ -1,0 +1,15 @@
+import signal
+
+public func main() {
+    const valid = signal.Body { raw: "{\"title\":\"Ship\",\"priority\":1}" }
+    const data = valid.validate({"title": "string", "priority": "int"})
+    print(data["priority"])
+
+    const invalid = signal.Body { raw: "{\"title\":\"Ship\",\"priority\":\"high\"}" }
+    try {
+        invalid.validate({"title": "string", "priority": "int"})
+    } catch (error) {
+        print(error)
+    }
+}
+

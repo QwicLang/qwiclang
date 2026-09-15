@@ -1,0 +1,35 @@
+import json
+
+public type Request {
+    method: string
+    path: string
+    params: map
+    body: Body
+    headers: map
+}
+
+public type Body {
+    raw: string
+}
+
+public func (body: Body) validate(schema: map): map {
+    const data = json.parse(body.raw)
+    for key in schema.keys() {
+        const expectedType = schema[key]
+        const actualValue = data[key]
+        if actualValue == null {
+            throw "Missing required field: " + key
+        }
+        if expectedType == "int" && actualValue.type != "int" {
+            throw "Field " + key + " must be an integer"
+        }
+        if expectedType == "string" && actualValue.type != "string" {
+            throw "Field " + key + " must be a string"
+        }
+        if expectedType == "bool" && actualValue.type != "bool" {
+            throw "Field " + key + " must be a boolean"
+        }
+    }
+    return data
+}
+

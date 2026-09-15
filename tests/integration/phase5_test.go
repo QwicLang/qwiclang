@@ -1,11 +1,17 @@
 package integration_test
 
 import (
+	"bytes"
+	"io"
+	"net/http"
+	"os/exec"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"qwiclang/internal/codegen"
 	"qwiclang/internal/ir"
+	"qwiclang/internal/project"
 	"qwiclang/internal/sema"
 )
 
@@ -105,6 +111,43 @@ public func createUser() {
 		t.Fatalf("expected no IR diagnostics, got %v", diagnostics)
 	}
 	assertModuleOutput(t, module, "created\n")
+}
+
+func TestImportedPublicTypeAndMethodsBuildAndRun(t *testing.T) {
+	files := []sema.SourceFile{
+		{Filename: "main.qw", Source: `import counters
+
+public func main() {
+    const counter = counters.Counter.new(40)
+    print(counter.add(2))
+}
+`},
+		{Filename: "counter.qw", Source: `module counters
+
+public type Counter {
+    value: int
+}
+
+public func Counter.new(value: int): Counter {
+    return Counter { value: value }
+}
+
+public func (counter: Counter) add(delta: int): int {
+    counter.value = counter.value + delta
+    return counter.value
+}
+`},
+	}
+
+	result, diagnostics := sema.CheckFiles(files)
+	if len(diagnostics) > 0 {
+		t.Fatalf("expected no frontend diagnostics, got %v", diagnostics)
+	}
+	module, diagnostics := ir.Build(result)
+	if len(diagnostics) > 0 {
+		t.Fatalf("expected no IR diagnostics, got %v", diagnostics)
+	}
+	assertModuleOutput(t, module, "42\n")
 }
 
 func TestRuntimeBackedPrintingBuildsAndRuns(t *testing.T) {
@@ -231,6 +274,77 @@ public func main() {
 `, "42.000000\n10.000000\n20.000000\n4.000000\n8.000000\n3.000000\n4.000000\n4.000000\n")
 }
 
+func TestSignalPackageBuildsAndValidatesJSON(t *testing.T) {
+	sourcePath := filepath.Join("testdata", "signal", "validation.qw")
+	files, diagnostics := project.CollectSourceFiles(sourcePath)
+	if len(diagnostics) > 0 {
+		t.Fatalf("collect Signal package: %v", diagnostics)
+	}
+	result, diagnostics := sema.CheckFiles(files)
+	if len(diagnostics) > 0 {
+		t.Fatalf("check Signal package: %v", diagnostics)
+	}
+	module, diagnostics := ir.Build(result)
+	if len(diagnostics) > 0 {
+		t.Fatalf("build Signal IR: %v", diagnostics)
+	}
+	assertModuleOutput(t, module, "1\nField priority must be an integer\n")
+}
+
+func TestSignalHTTPApplicationBuildsAndServesRoute(t *testing.T) {
+	sourcePath := filepath.Join("testdata", "signal", "main.qw")
+	files, diagnostics := project.CollectSourceFiles(sourcePath)
+	if len(diagnostics) > 0 {
+		t.Fatalf("collect Signal package: %v", diagnostics)
+	}
+	result, diagnostics := sema.CheckFiles(files)
+	if len(diagnostics) > 0 {
+		t.Fatalf("check Signal package: %v", diagnostics)
+	}
+	module, diagnostics := ir.Build(result)
+	if len(diagnostics) > 0 {
+		t.Fatalf("build Signal IR: %v", diagnostics)
+	}
+	outputPath := filepath.Join(t.TempDir(), "signal-server")
+	if diagnostics := codegen.BuildExecutable(module, codegen.Options{OutputPath: outputPath, RuntimePath: filepath.Join("..", "..", "runtime")}); len(diagnostics) > 0 {
+		t.Fatalf("build Signal executable: %v", diagnostics)
+	}
+
+	command := exec.Command(outputPath)
+	var processOutput bytes.Buffer
+	command.Stdout = &processOutput
+	command.Stderr = &processOutput
+	if err := command.Start(); err != nil {
+		t.Fatalf("start Signal executable: %v", err)
+	}
+	defer func() {
+		_ = command.Process.Kill()
+		_ = command.Wait()
+	}()
+
+	client := &http.Client{Timeout: 500 * time.Millisecond}
+	deadline := time.Now().Add(5 * time.Second)
+	var response *http.Response
+	var err error
+	for time.Now().Before(deadline) {
+		response, err = client.Get("http://127.0.0.1:18080/user/42")
+		if err == nil {
+			break
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	if err != nil {
+		t.Fatalf("request Signal route: %v; process output: %s", err, processOutput.String())
+	}
+	defer response.Body.Close()
+	body, err := io.ReadAll(response.Body)
+	if err != nil {
+		t.Fatalf("read Signal response: %v", err)
+	}
+	if response.StatusCode != http.StatusOK || string(body) != `{"userId":42,"name":"Qwic User 42"}` {
+		t.Fatalf("Signal response = %d %s", response.StatusCode, body)
+	}
+}
 
 func assertProgramOutput(t *testing.T, source string, want string) {
 	t.Helper()

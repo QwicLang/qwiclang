@@ -195,6 +195,11 @@ func (lexer *Lexer) lexSymbol(start token.Position) (token.Token, *Error) {
 		lexer.advance()
 		return lexer.makeToken(token.Plus, "+", start), nil
 	case '-':
+		if lexer.peekAheadRune(1, '>') {
+			lexer.advance()
+			lexer.advance()
+			return lexer.makeToken(token.ReturnArrow, "->", start), nil
+		}
 		lexer.advance()
 		return lexer.makeToken(token.Minus, "-", start), nil
 	case '*':
@@ -204,6 +209,11 @@ func (lexer *Lexer) lexSymbol(start token.Position) (token.Token, *Error) {
 		lexer.advance()
 		return lexer.makeToken(token.Percent, "%", start), nil
 	case '=':
+		if lexer.peekAheadRune(1, '>') {
+			lexer.advance()
+			lexer.advance()
+			return lexer.makeToken(token.FatArrow, "=>", start), nil
+		}
 		return lexer.lexOneOrTwoChar(start, '=', token.Assign, token.Equal), nil
 	case '!':
 		return lexer.lexOneOrTwoChar(start, '=', token.Not, token.NotEqual), nil
@@ -250,6 +260,11 @@ func (lexer *Lexer) lexSymbol(start token.Position) (token.Token, *Error) {
 		lexer.advance()
 		return lexer.makeToken(token.Comma, ",", start), nil
 	case '.':
+		if lexer.peekAheadRune(1, '.') {
+			lexer.advance()
+			lexer.advance()
+			return lexer.makeToken(token.Range, "..", start), nil
+		}
 		lexer.advance()
 		return lexer.makeToken(token.Dot, ".", start), nil
 	case ';':
